@@ -1,0 +1,82 @@
+@page "/orders"
+@using SAT242516033.Components.Pages.Models
+@inject Providers.IMyDbModel_Provider DbProvider
+
+<PageTitle>Orders</PageTitle>
+
+<h3>Orders</h3>
+
+<input placeholder="Search product name..." @bind="search" />
+<button @onclick="LoadOrders">Search</button>
+<button @onclick="NewOrder">New Order</button>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Product</th>
+            <th>Quantity</th>
+            <th>Price</th>
+            <th>OrderDate</th>
+            <th>Status</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var o in orders)
+        {
+            <tr>
+                <td>@o.Id</td>
+                <td>@o.Product?.Name</td>
+                <td>@o.Quantity</td>
+                <td>@(o.Product?.Price.ToString("C") ?? "-")</td>
+                <td>@o.OrderDate.ToString("g")</td>
+                <td>@o.Status</td>
+                <td>
+                    <button @onclick="() => EditOrder(o.Id)">Edit</button>
+                    <button @onclick="() => DeleteOrder(o.Id)">Delete</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<OrderDto> orders = new();
+    private string? search;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrders();
+    }
+
+    private async Task LoadOrders()
+    {
+        // Call stored procedure or provider - default sp names used for demo
+        var items = await DbProvider.GetItems<OrderDto>("usp_GetOrders", ("Search", search ?? string.Empty));
+        orders = items?.ToList() ?? new List<OrderDto>();
+        // In-memory join: get products
+        var prods = (await DbProvider.GetItems<ProductDto>("usp_GetProducts")).ToList();
+        foreach (var o in orders)
+            o.Product = prods.FirstOrDefault(p => p.Id == o.ProductId);
+    }
+
+    private void NewOrder()
+    {
+        NavManager.NavigateTo($"/orders/new");
+    }
+
+    [Inject]
+    public NavigationManager NavManager { get; set; } = default!;
+
+    private void EditOrder(int id)
+    {
+        NavManager.NavigateTo($"/orders/edit/{id}");
+    }
+
+    private async Task DeleteOrder(int id)
+    {
+        await DbProvider.SetItems<object>("usp_DeleteOrder", ("Id", id));
+        await LoadOrders();
+    }
+}

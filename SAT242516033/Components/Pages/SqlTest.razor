@@ -1,0 +1,352 @@
+@page "/sql-test"
+@using System.Data
+@using Microsoft.EntityFrameworkCore
+@inject SAT242516033.Data.ApplicationDbContext Db
+
+<PageTitle>SQL Test</PageTitle>
+
+<h3>SQL Test — Data Tables</h3>
+
+<p>Bu sayfa `Data` klasöründeki tablolarý (EF Core DbSet) kullanarak hýzlý SQL/CRUD testleri yapmanýzý saðlar.
+Seed, listeleme, ekleme, silme ve ham SQL çalýþtýrma seçenekleri vardýr.</p>
+
+<button class="btn btn-primary me-2" @onclick="SeedSampleData">Seed Sample Data (ekle)</button>
+<button class="btn btn-secondary me-2" @onclick="LoadAll">Yenile</button>
+
+<hr />
+
+<_OrderNav />
+
+<h4>Ürünler</h4>
+<p>Toplam: @urunler.Count</p>
+<button class="btn btn-sm btn-outline-primary mb-2" @onclick="AddSampleProduct">Örnek Ürün Ekle</button>
+<table class="table table-sm">
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Ad</th>
+            <th>Fiyat</th>
+            <th>Stok</th>
+            <th>Aktif</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var u in urunler)
+        {
+            <tr>
+                <td>@u.UrunId</td>
+                <td>@u.UrunAdi</td>
+                <td>@u.BirimFiyat.ToString("C")</td>
+                <td>@u.StokAdet</td>
+                <td>@(u.AktifMi ? "Evet" : "Hayýr")</td>
+                <td><button class="btn btn-sm btn-danger" @onclick="() => DeleteProduct(u.UrunId)">Sil</button></td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<h4>Kategoriler</h4>
+<p>Toplam: @kategoriler.Count</p>
+<table class="table table-sm">
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Ad</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var k in kategoriler)
+        {
+            <tr>
+                <td>@k.KategoriId</td>
+                <td>@k.KategoriAdi</td>
+                <td><button class="btn btn-sm btn-danger" @onclick="() => DeleteCategory(k.KategoriId)">Sil</button></td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<h4>Müþteriler</h4>
+<p>Toplam: @musteriler.Count</p>
+<table class="table table-sm">
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Ad Soyad</th>
+            <th>Email</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var m in musteriler)
+        {
+            <tr>
+                <td>@m.MusteriId</td>
+                <td>@m.Ad @m.Soyad</td>
+                <td>@m.Email</td>
+                <td><button class="btn btn-sm btn-danger" @onclick="() => DeleteCustomer(m.MusteriId)">Sil</button></td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<h4>Sipariþler</h4>
+<p>Toplam: @siparisler.Count</p>
+<table class="table table-sm">
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Müþteri</th>
+            <th>Tarih</th>
+            <th>Durum</th>
+            <th>Toplam</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var s in siparisler)
+        {
+            <tr>
+                <td>@s.SiparisId</td>
+                <td>@s.Musteri?.Ad @s.Musteri?.Soyad</td>
+                <td>@s.SiparisTarihi.ToString("g")</td>
+                <td>@s.Durum</td>
+                <td>
+                    @{
+                        var tot = siparisDetaylari.Where(d => d.SiparisId == s.SiparisId).Sum(d => d.Miktar * d.BirimFiyat);
+                    }
+                    @tot.ToString("C")
+                </td>
+                <td><button class="btn btn-sm btn-danger" @onclick="() => DeleteOrder(s.SiparisId)">Sil</button></td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<h4>Ham SQL Çalýþtýr</h4>
+<p>SELECT sorgularý için "Run Query", INSERT/UPDATE/DELETE gibi sorgular için "Run Non-Query" kullanýn.</p>
+<textarea style="width:100%" rows="6" @bind="rawSql"></textarea>
+<div class="mt-2">
+    <button class="btn btn-sm btn-primary me-2" @onclick="RunSqlQuery">Run Query (SELECT)</button>
+    <button class="btn btn-sm btn-warning me-2" @onclick="RunSqlNonQuery">Run Non-Query</button>
+    <span class="text-muted">@rawSqlResultMessage</span>
+</div>
+
+@if (sqlResult != null && sqlResult.Columns.Count > 0)
+{
+    <h5 class="mt-3">Sonuç</h5>
+    <table class="table table-bordered table-sm">
+        <thead>
+            <tr>
+                @foreach (DataColumn c in sqlResult.Columns)
+                {
+                    <th>@c.ColumnName</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @for (int r = 0; r < sqlResult.Rows.Count; r++)
+            {
+                <tr>
+                    @foreach (DataColumn c in sqlResult.Columns)
+                    {
+                        <td>@sqlResult.Rows[r][c]</td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<UrunSiparisTakip.Models.Urun> urunler = new();
+    private List<UrunSiparisTakip.Models.Kategori> kategoriler = new();
+    private List<UrunSiparisTakip.Models.Musteri> musteriler = new();
+    private List<UrunSiparisTakip.Models.Siparis> siparisler = new();
+    private List<UrunSiparisTakip.Models.SiparisDetayi> siparisDetaylari = new();
+    private List<UrunSiparisTakip.Models.UrunKategori> urunKategorileri = new();
+
+    private DataTable sqlResult = new();
+    private string rawSql = string.Empty;
+    private string rawSqlResultMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAll();
+    }
+
+    private async Task LoadAll()
+    {
+        urunler = await Db.Urunler.ToListAsync();
+        kategoriler = await Db.Kategoriler.ToListAsync();
+        musteriler = await Db.Musteriler.ToListAsync();
+        siparisDetaylari = await Db.SiparisDetaylari.Include(d => d.Urun).ToListAsync();
+        siparisler = await Db.Siparisler.Include(s => s.Musteri).ToListAsync();
+        urunKategorileri = await Db.UrunKategorileri.Include(uk => uk.Urun).Include(uk => uk.Kategori).ToListAsync();
+
+        sqlResult = new DataTable();
+        rawSqlResultMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task SeedSampleData()
+    {
+        // basit örnek veriler ekle (varsa eklemez)
+        if (await Db.Kategoriler.AnyAsync() || await Db.Urunler.AnyAsync() || await Db.Musteriler.AnyAsync())
+        {
+            rawSqlResultMessage = "Veri zaten mevcut. Seed atlanýyor.";
+            return;
+        }
+
+        var cat1 = new UrunSiparisTakip.Models.Kategori { KategoriAdi = "Elektronik" };
+        var cat2 = new UrunSiparisTakip.Models.Kategori { KategoriAdi = "Kitap" };
+
+        var p1 = new UrunSiparisTakip.Models.Urun { UrunAdi = "Laptop", SKU = "LP100", BirimFiyat = 7500m, StokAdet = 10, AktifMi = true };
+        var p2 = new UrunSiparisTakip.Models.Urun { UrunAdi = "C# Kitabý", SKU = "BK200", BirimFiyat = 120m, StokAdet = 50, AktifMi = true };
+
+        var m1 = new UrunSiparisTakip.Models.Musteri { Ad = "Ahmet", Soyad = "Yýlmaz", Email = "ahmet@example.com" };
+        var m2 = new UrunSiparisTakip.Models.Musteri { Ad = "Mehmet", Soyad = "Kara", Email = "mehmet@example.com" };
+
+        await Db.Kategoriler.AddRangeAsync(cat1, cat2);
+        await Db.Urunler.AddRangeAsync(p1, p2);
+        await Db.Musteriler.AddRangeAsync(m1, m2);
+        await Db.SaveChangesAsync();
+
+        // iliþki tablosu
+        await Db.UrunKategorileri.AddAsync(new UrunSiparisTakip.Models.UrunKategori { UrunId = p1.UrunId, KategoriId = cat1.KategoriId });
+        await Db.UrunKategorileri.AddAsync(new UrunSiparisTakip.Models.UrunKategori { UrunId = p2.UrunId, KategoriId = cat2.KategoriId });
+        await Db.SaveChangesAsync();
+
+        // sipariþ
+        var sip = new UrunSiparisTakip.Models.Siparis { MusteriId = m1.MusteriId, SiparisTarihi = DateTime.Now, Durum = "Beklemede" };
+        await Db.Siparisler.AddAsync(sip);
+        await Db.SaveChangesAsync();
+
+        var det = new UrunSiparisTakip.Models.SiparisDetayi { SiparisId = sip.SiparisId, UrunId = p1.UrunId, Miktar = 1, BirimFiyat = p1.BirimFiyat };
+        await Db.SiparisDetaylari.AddAsync(det);
+        await Db.SaveChangesAsync();
+
+        await LoadAll();
+        rawSqlResultMessage = "Seed tamamlandý.";
+    }
+
+    private async Task AddSampleProduct()
+    {
+        var p = new UrunSiparisTakip.Models.Urun { UrunAdi = "Örnek Ürün " + DateTime.Now.Ticks.ToString().Substring(10), SKU = "S" + DateTime.Now.Ticks % 10000, BirimFiyat = 9.99m, StokAdet = 100, AktifMi = true };
+        await Db.Urunler.AddAsync(p);
+        await Db.SaveChangesAsync();
+        await LoadAll();
+    }
+
+    private async Task DeleteProduct(int id)
+    {
+        var p = await Db.Urunler.FindAsync(id);
+        if (p != null)
+        {
+            // detaylar ve iliþki kayýtlarýný sil
+            var details = Db.SiparisDetaylari.Where(d => d.UrunId == id);
+            Db.SiparisDetaylari.RemoveRange(details);
+
+            var urunk = Db.UrunKategorileri.Where(uk => uk.UrunId == id);
+            Db.UrunKategorileri.RemoveRange(urunk);
+
+            Db.Urunler.Remove(p);
+            await Db.SaveChangesAsync();
+            await LoadAll();
+        }
+    }
+
+    private async Task DeleteCategory(int id)
+    {
+        var k = await Db.Kategoriler.FindAsync(id);
+        if (k != null)
+        {
+            var urunk = Db.UrunKategorileri.Where(uk => uk.KategoriId == id);
+            Db.UrunKategorileri.RemoveRange(urunk);
+            Db.Kategoriler.Remove(k);
+            await Db.SaveChangesAsync();
+            await LoadAll();
+        }
+    }
+
+    private async Task DeleteCustomer(int id)
+    {
+        var c = await Db.Musteriler.FindAsync(id);
+        if (c != null)
+        {
+            var orders = Db.Siparisler.Where(s => s.MusteriId == id);
+            foreach (var o in orders)
+            {
+                var dets = Db.SiparisDetaylari.Where(d => d.SiparisId == o.SiparisId);
+                Db.SiparisDetaylari.RemoveRange(dets);
+            }
+            Db.Siparisler.RemoveRange(orders);
+            Db.Musteriler.Remove(c);
+            await Db.SaveChangesAsync();
+            await LoadAll();
+        }
+    }
+
+    private async Task DeleteOrder(int id)
+    {
+        var o = await Db.Siparisler.FindAsync(id);
+        if (o != null)
+        {
+            var dets = Db.SiparisDetaylari.Where(d => d.SiparisId == id);
+            Db.SiparisDetaylari.RemoveRange(dets);
+            Db.Siparisler.Remove(o);
+            await Db.SaveChangesAsync();
+            await LoadAll();
+        }
+    }
+
+    private async Task RunSqlQuery()
+    {
+        sqlResult = new DataTable();
+        rawSqlResultMessage = string.Empty;
+        if (string.IsNullOrWhiteSpace(rawSql))
+        {
+            rawSqlResultMessage = "Lütfen bir SELECT sorgusu girin.";
+            return;
+        }
+
+        try
+        {
+            var conn = Db.Database.GetDbConnection();
+            if (conn.State != ConnectionState.Open)
+                await conn.OpenAsync();
+
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = rawSql;
+            using var reader = await cmd.ExecuteReaderAsync();
+            sqlResult.Load(reader);
+        }
+        catch (Exception ex)
+        {
+            rawSqlResultMessage = ex.Message;
+        }
+    }
+
+    private async Task RunSqlNonQuery()
+    {
+        rawSqlResultMessage = string.Empty;
+        if (string.IsNullOrWhiteSpace(rawSql))
+        {
+            rawSqlResultMessage = "Lütfen bir SQL sorgusu girin.";
+            return;
+        }
+
+        try
+        {
+            var affected = await Db.Database.ExecuteSqlRawAsync(rawSql);
+            rawSqlResultMessage = $"Etki: {affected} satýr";
+            await LoadAll();
+        }
+        catch (Exception ex)
+        {
+            rawSqlResultMessage = ex.Message;
+        }
+    }
+}
