@@ -6,12 +6,8 @@ namespace SAT242516033.Data
 {
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-            : base(options)
-        {
-        }
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
-        // Domain DbSets for Urun/Siparis models so pages can use EF directly
         public DbSet<Urun> Urunler { get; set; } = null!;
         public DbSet<Kategori> Kategoriler { get; set; } = null!;
         public DbSet<Musteri> Musteriler { get; set; } = null!;
@@ -23,9 +19,11 @@ namespace SAT242516033.Data
         {
             base.OnModelCreating(builder);
 
-            // Composite key for join table
-            builder.Entity<UrunKategori>()
-                .HasKey(uk => new { uk.UrunId, uk.KategoriId });
+            builder.Entity<Urun>().ToTable("Urunler");
+            builder.Entity<Urun>().HasKey(x => x.UrunId);
+
+            builder.Entity<UrunKategori>().ToTable("UrunKategorileri");
+            builder.Entity<UrunKategori>().HasKey(uk => new { uk.UrunId, uk.KategoriId });
         }
     }
 }
