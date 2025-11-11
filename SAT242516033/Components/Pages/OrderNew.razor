@@ -1,51 +1,204 @@
 @page "/orders/new"
 @using SAT242516033.Components.Pages.Models
-@inject Providers.IMyDbModel_Provider DbProvider
+@inject SAT242516033.Services.IOrderDataService OrderService
+@inject NavigationManager NavManager
 
-<PageTitle>New Order</PageTitle>
+<PageTitle>Yeni Sipariş</PageTitle>
 
-<h3>New Order</h3>
+<h1 class="h3 mb-3">Yeni Sipariş Oluştur</h1>
+<p class="text-muted">Sipariş bilgilerini doldurun ve kayıt işlemini tamamlamak için kaydet butonunu kullanın.</p>
 
-<div>
-    <label>Product</label>
-    <select @bind="order.ProductId">
-        @foreach (var p in products)
-        {
-            <option value="@p.Id">@p.Name</option>
-        }
-    </select>
-</div>
-<div>
-    <label>Quantity</label>
-    <input type="number" @bind="order.Quantity" />
-</div>
-<div>
-    <label>Status</label>
-    <input @bind="order.Status" />
-</div>
-<button @onclick="Save">Create</button>
-<button @onclick="Cancel">Cancel</button>
+<EditForm Model="form" OnValidSubmit="SaveAsync">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header fw-semibold">Sipariş Bilgileri</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Müşteri</label>
+                    <select class="form-select" @bind="form.MusteriId" required>
+                        <option value="">Seçiniz</option>
+                        @foreach (var m in customers)
+                        {
+                            <option value="@m.MusteriId">@m.Ad @m.Soyad</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Durum</label>
+                    <select class="form-select" @bind="form.Durum">
+                        @foreach (var durum in statusOptions)
+                        {
+                            <option value="@durum">@durum</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex align-items-end justify-content-end">
+                    <div class="text-muted">Sipariş tarihi kayıtta otomatik oluşturulur.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Sipariş Kalemleri</span>
+            <button class="btn btn-sm btn-outline-primary" type="button" @onclick="AddDetailRow">
+                <span class="bi bi-plus-circle"></span> Ürün Ekle
+            </button>
+        </div>
+        <div class="card-body">
+            @if (form.Detaylar.Count == 0)
+            {
+                <div class="alert alert-info">Siparişe ürün eklemek için "Ürün Ekle" butonunu kullanın.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 35%">Ürün</th>
+                                <th style="width: 15%" class="text-end">Miktar</th>
+                                <th style="width: 20%" class="text-end">Birim Fiyat</th>
+                                <th style="width: 20%" class="text-end">Tutar</th>
+                                <th style="width: 10%" class="text-end"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var detail in form.Detaylar)
+                            {
+                                <tr>
+                                    <td>
+                                        <select class="form-select" @bind-Value="detail.UrunId" @bind-Value:after="() => OnProductChanged(detail)">
+                                            <option value="">Seçiniz</option>
+                                            @foreach (var p in products)
+                                            {
+                                                <option value="@p.UrunId">@p.UrunAdi</option>
+                                            }
+                                        </select>
+                                    </td>
+                                    <td class="text-end">
+                                        <InputNumber class="form-control" @bind-Value="detail.Miktar" min="1" />
+                                    </td>
+                                    <td class="text-end">
+                                        <InputNumber class="form-control" @bind-Value="detail.BirimFiyat" step="0.01" min="0" />
+                                    </td>
+                                    <td class="text-end align-middle">@detail.SatirTutar.ToString("C")</td>
+                                    <td class="text-end">
+                                        <button class="btn btn-outline-danger btn-sm" type="button" @onclick="() => RemoveDetail(detail)">
+                                            <span class="bi bi-trash"></span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-end fw-semibold">Toplam: @form.Detaylar.Sum(d => d.SatirTutar).ToString("C")</div>
+            }
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+
+    <div class="d-flex gap-2">
+        <button class="btn btn-success" type="submit" disabled="@isSaving">
+            <span class="bi bi-save"></span> Kaydet
+        </button>
+        <button class="btn btn-outline-secondary" type="button" @onclick="Cancel">
+            <span class="bi bi-x-circle"></span> İptal
+        </button>
+    </div>
+</EditForm>
 
 @code {
-    private OrderDto order = new() { OrderDate = DateTime.Now, Quantity = 1, Status = "New" };
-    private List<ProductDto> products = new();
+    private OrderFormModel form = new();
+    private List<UrunSiparisTakip.Models.Musteri> customers = new();
+    private List<UrunSiparisTakip.Models.Urun> products = new();
+    private List<string> statusOptions = new();
+    private bool isSaving;
+    private string? errorMessage;
 
     protected override async Task OnInitializedAsync()
     {
-        products = (await DbProvider.GetItems<ProductDto>("usp_GetProducts")).ToList();
+        await LoadReferenceDataAsync();
+        if (statusOptions.Count == 0)
+        {
+            statusOptions.Add("Beklemede");
+        }
+
+        form.Durum ??= statusOptions.FirstOrDefault() ?? "Beklemede";
+        AddDetailRow();
     }
 
-    [Inject]
-    public NavigationManager NavManager { get; set; } = default!;
-
-    private async Task Save()
+    private async Task LoadReferenceDataAsync()
     {
-        await DbProvider.SetItems<object>("usp_SaveOrder",
-            ("Id", order.Id),
-            ("ProductId", order.ProductId),
-            ("Quantity", order.Quantity),
-            ("Status", order.Status ?? string.Empty));
-        NavManager.NavigateTo("/orders");
+        var customerTask = OrderService.GetCustomersAsync();
+        var productTask = OrderService.GetProductsAsync();
+        var statusTask = OrderService.GetDurumOptionsAsync();
+        await Task.WhenAll(customerTask, productTask, statusTask);
+        customers = customerTask.Result.ToList();
+        products = productTask.Result.ToList();
+        statusOptions = statusTask.Result.ToList();
+    }
+
+    private void AddDetailRow()
+    {
+        form.Detaylar.Add(new OrderFormDetailModel { Miktar = 1 });
+    }
+
+    private void RemoveDetail(OrderFormDetailModel detail)
+    {
+        form.Detaylar.Remove(detail);
+    }
+
+    private void OnProductChanged(OrderFormDetailModel detail)
+    {
+        if (detail.UrunId is null)
+        {
+            detail.BirimFiyat = 0;
+            return;
+        }
+
+        var product = products.FirstOrDefault(p => p.UrunId == detail.UrunId.Value);
+        if (product is not null)
+        {
+            detail.BirimFiyat = product.BirimFiyat;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        errorMessage = null;
+        if (form.Detaylar.All(d => !d.UrunId.HasValue || d.Miktar <= 0))
+        {
+            errorMessage = "En az bir geçerli ürün detayı eklenmelidir.";
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            var success = await OrderService.SaveOrderAsync(form);
+            if (success)
+            {
+                NavManager.NavigateTo("/orders");
+            }
+            else
+            {
+                errorMessage = "Sipariş kaydı gerçekleştirilemedi. Lütfen alanları kontrol edin.";
+            }
+        }
+        finally
+        {
+            isSaving = false;
+        }
     }
 
     private void Cancel()

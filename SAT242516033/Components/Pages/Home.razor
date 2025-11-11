@@ -1,13 +1,106 @@
-﻿@page "/"
+@page "/"
+@inject SAT242516033.Services.IOrderDataService OrderService
+@inject NavigationManager NavManager
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Ürün Sipariş ve Takip Sistemi</PageTitle>
 
-<h1>Hello, world!</h1>
+<section class="py-5">
+    <div class="bg-light border rounded-3 p-5 shadow-sm">
+        <h1 class="display-5 fw-semibold">Ürün Sipariş ve Takip Sistemi</h1>
+        <p class="col-lg-8 fs-5 mt-3">
+            Tüm sipariş süreçlerinizi izleyin, müşteri taleplerini yönetin ve güncel stok bilgileriyle hızlı aksiyon alın.
+        </p>
+        <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-primary btn-lg" @onclick="() => NavManager.NavigateTo("/orders")">Siparişleri Yönet</button>
+            <button class="btn btn-outline-primary btn-lg" @onclick="() => NavManager.NavigateTo("/orders/new")">Yeni Sipariş Oluştur</button>
+            <button class="btn btn-outline-secondary btn-lg" @onclick="() => NavManager.NavigateTo("/urunler")">Ürünleri Güncelle</button>
+        </div>
+    </div>
+</section>
 
-Welcome to your new app.
+<section class="mb-5">
+    <h2 class="h4 mb-3">Öne Çıkan Göstergeler</h2>
+    @if (metrics is null)
+    {
+        <div class="alert alert-info">Göstergeler yükleniyor...</div>
+    }
+    else
+    {
+        <div class="row g-3">
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="text-muted text-uppercase small">Toplam Sipariş</div>
+                        <div class="display-6 fw-semibold">@metrics.TotalOrders</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="text-muted text-uppercase small">Bekleyen Sipariş</div>
+                        <div class="display-6 fw-semibold">@metrics.PendingOrders</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="text-muted text-uppercase small">Toplam Ciro</div>
+                        <div class="display-6 fw-semibold">@metrics.TotalRevenue.ToString("C")</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="text-muted text-uppercase small">Aktif Ürün</div>
+                        <div class="display-6 fw-semibold">@metrics.ActiveProducts</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</section>
 
-<hr />
+<section class="mb-5">
+    <h2 class="h4 mb-3">Hızlı İşlemler</h2>
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h3 class="h5">Siparişleri Listele</h3>
+                    <p class="text-muted">Filtreleme, detay görüntüleme ve SQL üzerinden düzenleme işlemlerini gerçekleştirin.</p>
+                    <button class="btn btn-outline-primary" @onclick="() => NavManager.NavigateTo("/orders")">Siparişler Sayfasına Git</button>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h3 class="h5">Yeni Sipariş</h3>
+                    <p class="text-muted">Müşteri ve ürün bilgilerini seçerek yeni siparişleri hızlıca kaydedin.</p>
+                    <button class="btn btn-outline-success" @onclick="() => NavManager.NavigateTo("/orders/new")">Sipariş Oluştur</button>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h3 class="h5">Ürün Yönetimi</h3>
+                    <p class="text-muted">Stok, fiyat ve ürün bilgilerini düzenleyerek sipariş süreçlerini destekleyin.</p>
+                    <button class="btn btn-outline-secondary" @onclick="() => NavManager.NavigateTo("/urunler")">Ürünleri Yönet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
 
-<_OrderNav />
+@code {
+    private DashboardMetrics? metrics;
 
-<p>Use the Orders pages to test SQL operations via the project's provider and stored procedures.</p>
+    protected override async Task OnInitializedAsync()
+    {
+        metrics = await OrderService.GetDashboardMetricsAsync();
+    }
+}
