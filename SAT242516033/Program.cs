@@ -8,6 +8,7 @@ using Providers;
 using SAT242516033.Components;
 using SAT242516033.Components.Account;
 using SAT242516033.Data;
+using SAT242516033.Services;
 using UnitOfWorks;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -50,6 +51,7 @@ builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSe
 builder.Services.AddScoped<IMyDbModel_UnitOfWork, MyDbModel_UnitOfWork<MyDbModel_DbContext>>();
 builder.Services.AddScoped(typeof(IMyDbModel<>), typeof(MyDbModel<>));
 builder.Services.AddScoped<IMyDbModel_Provider, MyDbModel_Provider>();
+builder.Services.AddScoped<IOrderDataService, OrderDataService>();
 
 var app = builder.Build();
 

@@ -1,82 +1,318 @@
 @page "/orders"
 @using SAT242516033.Components.Pages.Models
-@inject Providers.IMyDbModel_Provider DbProvider
+@inject SAT242516033.Services.IOrderDataService OrderService
+@inject NavigationManager NavManager
+@inject IJSRuntime JsRuntime
 
-<PageTitle>Orders</PageTitle>
+<PageTitle>Siparişler</PageTitle>
 
-<h3>Orders</h3>
+<h1 class="h3 mb-3">Sipariş Yönetimi</h1>
+<p class="text-muted">SQL Server üzerindeki <code>dbo.sp_Siparisler</code> saklı yordamı ile siparişleri filtreleyin, inceleyin ve güncelleyin.</p>
 
-<input placeholder="Search product name..." @bind="search" />
-<button @onclick="LoadOrders">Search</button>
-<button @onclick="NewOrder">New Order</button>
+<div class="card shadow-sm mb-4">
+    <div class="card-header fw-semibold">Filtreler</div>
+    <div class="card-body">
+        <EditForm Model="filter" OnValidSubmit="ApplyFilters">
+            <DataAnnotationsValidator />
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Müşteri</label>
+                    <select class="form-select" @bind="filter.MusteriId">
+                        <option value="">Tümü</option>
+                        @foreach (var m in customers)
+                        {
+                            <option value="@m.MusteriId">@m.Ad @m.Soyad</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Durum</label>
+                    <select class="form-select" @bind="filter.Durum">
+                        <option value="">Tümü</option>
+                        @foreach (var durum in statusOptions)
+                        {
+                            <option value="@durum">@durum</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Başlangıç Tarihi</label>
+                    <InputDate class="form-control" @bind-Value="filter.StartDate" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Bitiş Tarihi</label>
+                    <InputDate class="form-control" @bind-Value="filter.EndDate" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Arama</label>
+                    <InputText class="form-control" @bind-Value="filter.Search" placeholder="Müşteri veya sipariş ara" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Sayfa Boyutu</label>
+                    <InputNumber class="form-control" @bind-Value="filter.PageSize" min="1" max="200" />
+                </div>
+            </div>
+            <div class="d-flex gap-2 mt-3">
+                <button class="btn btn-primary" type="submit" disabled="@isLoading">
+                    <span class="bi bi-search"></span> Filtrele
+                </button>
+                <button class="btn btn-outline-secondary" type="button" @onclick="ResetFilters" disabled="@isLoading">
+                    <span class="bi bi-arrow-counterclockwise"></span> Temizle
+                </button>
+                <button class="btn btn-success ms-auto" type="button" @onclick="CreateOrder">
+                    <span class="bi bi-plus-circle"></span> Yeni Sipariş
+                </button>
+            </div>
+        </EditForm>
+    </div>
+</div>
 
-<table class="table">
-    <thead>
-        <tr>
-            <th>Id</th>
-            <th>Product</th>
-            <th>Quantity</th>
-            <th>Price</th>
-            <th>OrderDate</th>
-            <th>Status</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var o in orders)
-        {
-            <tr>
-                <td>@o.Id</td>
-                <td>@o.Product?.Name</td>
-                <td>@o.Quantity</td>
-                <td>@(o.Product?.Price.ToString("C") ?? "-")</td>
-                <td>@o.OrderDate.ToString("g")</td>
-                <td>@o.Status</td>
-                <td>
-                    <button @onclick="() => EditOrder(o.Id)">Edit</button>
-                    <button @onclick="() => DeleteOrder(o.Id)">Delete</button>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+@if (isLoading)
+{
+    <div class="alert alert-info">Veriler yükleniyor...</div>
+}
+else if (orders is null || !orders.HasResults)
+{
+    <div class="alert alert-warning">Kriterlere uygun sipariş bulunamadı.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>Tarih</th>
+                    <th>Müşteri</th>
+                    <th>Durum</th>
+                    <th class="text-end">Toplam Tutar</th>
+                    <th class="text-end"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in orders.Items)
+                {
+                    <tr class="@((selectedOrderId == item.SiparisId) ? "table-primary" : string.Empty)">
+                        <td>@item.SiparisId</td>
+                        <td>@item.SiparisTarihi.ToString("dd.MM.yyyy HH:mm")</td>
+                        <td>@item.Musteri</td>
+                        <td>
+                            <span class="badge bg-secondary">@item.Durum</span>
+                        </td>
+                        <td class="text-end">@item.ToplamTutar.ToString("C")</td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" @onclick="() => ShowDetailsAsync(item.SiparisId)">
+                                    <span class="bi bi-list"></span>
+                                </button>
+                                <button class="btn btn-outline-secondary" @onclick="() => EditOrder(item.SiparisId)">
+                                    <span class="bi bi-pencil"></span>
+                                </button>
+                                <button class="btn btn-outline-danger" @onclick="() => DeleteOrderAsync(item.SiparisId)">
+                                    <span class="bi bi-trash"></span>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="d-flex align-items-center justify-content-between mt-3">
+        <div class="text-muted">Toplam @orders.TotalRecords kayıt • @orders.Page/@orders.TotalPages sayfa</div>
+        <div class="btn-group">
+            <button class="btn btn-outline-secondary" @onclick="PreviousPage" disabled="@(!CanGoPrevious)">
+                <span class="bi bi-chevron-left"></span>
+            </button>
+            <button class="btn btn-outline-secondary" @onclick="NextPage" disabled="@(!CanGoNext)">
+                <span class="bi bi-chevron-right"></span>
+            </button>
+        </div>
+    </div>
+}
+
+@if (selectedOrderId.HasValue)
+{
+    <div class="card shadow-sm mt-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Sipariş Detayları • #@selectedOrderId</span>
+            <button class="btn btn-sm btn-link text-decoration-none" @onclick="ClearDetails">Kapat</button>
+        </div>
+        <div class="card-body">
+            @if (detailLoading)
+            {
+                <div class="alert alert-info">Detaylar yükleniyor...</div>
+            }
+            else if (selectedDetails is null || selectedDetails.Count == 0)
+            {
+                <div class="alert alert-warning">Bu sipariş için detay bulunamadı.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Ürün</th>
+                                <th class="text-end">Miktar</th>
+                                <th class="text-end">Birim Fiyat</th>
+                                <th class="text-end">Tutar</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var detail in selectedDetails)
+                            {
+                                <tr>
+                                    <td>@detail.UrunAdi</td>
+                                    <td class="text-end">@detail.Miktar</td>
+                                    <td class="text-end">@detail.BirimFiyat.ToString("C")</td>
+                                    <td class="text-end">@detail.SatirTutar.ToString("C")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
 
 @code {
-    private List<OrderDto> orders = new();
-    private string? search;
+    private OrderFilterModel filter = new();
+    private PaginatedResult<OrderSummaryRow>? orders;
+    private IReadOnlyList<OrderDetailRow>? selectedDetails;
+    private List<UrunSiparisTakip.Models.Musteri> customers = new();
+    private List<string> statusOptions = new();
+    private int? selectedOrderId;
+    private bool isLoading;
+    private bool detailLoading;
+
+    private bool CanGoPrevious => orders is not null && orders.Page > 1 && !isLoading;
+    private bool CanGoNext => orders is not null && orders.Page < orders.TotalPages && !isLoading;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadOrders();
+        await LoadReferenceDataAsync();
+        await LoadOrdersAsync();
     }
 
-    private async Task LoadOrders()
+    private async Task LoadReferenceDataAsync()
     {
-        // Call stored procedure or provider - default sp names used for demo
-        var items = await DbProvider.GetItems<OrderDto>("usp_GetOrders", ("Search", search ?? string.Empty));
-        orders = items?.ToList() ?? new List<OrderDto>();
-        // In-memory join: get products
-        var prods = (await DbProvider.GetItems<ProductDto>("usp_GetProducts")).ToList();
-        foreach (var o in orders)
-            o.Product = prods.FirstOrDefault(p => p.Id == o.ProductId);
+        var customersTask = OrderService.GetCustomersAsync();
+        var statusTask = OrderService.GetDurumOptionsAsync();
+        await Task.WhenAll(customersTask, statusTask);
+        customers = customersTask.Result.ToList();
+        statusOptions = statusTask.Result.ToList();
     }
 
-    private void NewOrder()
+    private async Task LoadOrdersAsync()
     {
-        NavManager.NavigateTo($"/orders/new");
+        isLoading = true;
+        StateHasChanged();
+        try
+        {
+            filter.PageSize = Math.Clamp(filter.PageSize, 1, 200);
+            orders = await OrderService.GetOrdersAsync(filter);
+            if (orders.TotalPages > 0 && filter.Page > orders.TotalPages)
+            {
+                filter.Page = orders.TotalPages;
+                orders = await OrderService.GetOrdersAsync(filter);
+            }
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
     }
 
-    [Inject]
-    public NavigationManager NavManager { get; set; } = default!;
+    private async Task ApplyFilters()
+    {
+        filter.Page = 1;
+        await LoadOrdersAsync();
+    }
+
+    private async Task ResetFilters()
+    {
+        filter = new OrderFilterModel
+        {
+            Page = 1,
+            PageSize = 10
+        };
+        selectedOrderId = null;
+        selectedDetails = null;
+        await LoadOrdersAsync();
+    }
+
+    private async Task PreviousPage()
+    {
+        if (filter.Page > 1)
+        {
+            filter.Page--;
+            await LoadOrdersAsync();
+        }
+    }
+
+    private async Task NextPage()
+    {
+        if (orders is not null && filter.Page < orders.TotalPages)
+        {
+            filter.Page++;
+            await LoadOrdersAsync();
+        }
+    }
+
+    private void CreateOrder()
+    {
+        NavManager.NavigateTo("/orders/new");
+    }
 
     private void EditOrder(int id)
     {
         NavManager.NavigateTo($"/orders/edit/{id}");
     }
 
-    private async Task DeleteOrder(int id)
+    private async Task DeleteOrderAsync(int id)
     {
-        await DbProvider.SetItems<object>("usp_DeleteOrder", ("Id", id));
-        await LoadOrders();
+        var confirmed = JsRuntime is null || await JsRuntime.InvokeAsync<bool>("confirm", $"#{id} numaralı siparişi silmek istediğinize emin misiniz?");
+        if (!confirmed)
+        {
+            return;
+        }
+
+        if (await OrderService.DeleteOrderAsync(id))
+        {
+            if (selectedOrderId == id)
+            {
+                selectedOrderId = null;
+                selectedDetails = null;
+            }
+            await LoadOrdersAsync();
+        }
+    }
+
+    private async Task ShowDetailsAsync(int id)
+    {
+        if (selectedOrderId == id)
+        {
+            ClearDetails();
+            return;
+        }
+
+        selectedOrderId = id;
+        detailLoading = true;
+        selectedDetails = null;
+        StateHasChanged();
+
+        selectedDetails = await OrderService.GetOrderDetailsAsync(id);
+        detailLoading = false;
+        StateHasChanged();
+    }
+
+    private void ClearDetails()
+    {
+        selectedOrderId = null;
+        selectedDetails = null;
     }
 }
