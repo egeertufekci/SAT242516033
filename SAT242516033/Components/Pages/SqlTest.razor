@@ -5,21 +5,19 @@
 
 <PageTitle>SQL Test</PageTitle>
 
-<h3>SQL Test — Data Tables</h3>
+<h3>SQL Test â€” Data Tables</h3>
 
-<p>Bu sayfa `Data` klasöründeki tablolarý (EF Core DbSet) kullanarak hýzlý SQL/CRUD testleri yapmanýzý saðlar.
-Seed, listeleme, ekleme, silme ve ham SQL çalýþtýrma seçenekleri vardýr.</p>
+<p>Bu sayfa `Data` klasÃ¶rÃ¼ndeki tablolarÄ± (EF Core DbSet) kullanarak hÄ±zlÄ± SQL/CRUD testleri yapmanÄ±zÄ± saÄŸlar.
+Seed, listeleme, ekleme, silme ve ham SQL Ã§alÄ±ÅŸtÄ±rma seÃ§enekleri vardÄ±r.</p>
 
 <button class="btn btn-primary me-2" @onclick="SeedSampleData">Seed Sample Data (ekle)</button>
 <button class="btn btn-secondary me-2" @onclick="LoadAll">Yenile</button>
 
 <hr />
 
-<_OrderNav />
-
-<h4>Ürünler</h4>
+<h4>ÃœrÃ¼nler</h4>
 <p>Toplam: @urunler.Count</p>
-<button class="btn btn-sm btn-outline-primary mb-2" @onclick="AddSampleProduct">Örnek Ürün Ekle</button>
+<button class="btn btn-sm btn-outline-primary mb-2" @onclick="AddSampleProduct">Ã–rnek ÃœrÃ¼n Ekle</button>
 <table class="table table-sm">
     <thead>
         <tr>
@@ -39,7 +37,7 @@ Seed, listeleme, ekleme, silme ve ham SQL çalýþtýrma seçenekleri vardýr.</p>
                 <td>@u.UrunAdi</td>
                 <td>@u.BirimFiyat.ToString("C")</td>
                 <td>@u.StokAdet</td>
-                <td>@(u.AktifMi ? "Evet" : "Hayýr")</td>
+                <td>@(u.AktifMi ? "Evet" : "HayÄ±r")</td>
                 <td><button class="btn btn-sm btn-danger" @onclick="() => DeleteProduct(u.UrunId)">Sil</button></td>
             </tr>
         }
@@ -68,7 +66,7 @@ Seed, listeleme, ekleme, silme ve ham SQL çalýþtýrma seçenekleri vardýr.</p>
     </tbody>
 </table>
 
-<h4>Müþteriler</h4>
+<h4>MÃ¼ÅŸteriler</h4>
 <p>Toplam: @musteriler.Count</p>
 <table class="table table-sm">
     <thead>
@@ -92,13 +90,13 @@ Seed, listeleme, ekleme, silme ve ham SQL çalýþtýrma seçenekleri vardýr.</p>
     </tbody>
 </table>
 
-<h4>Sipariþler</h4>
+<h4>SipariÅŸler</h4>
 <p>Toplam: @siparisler.Count</p>
 <table class="table table-sm">
     <thead>
         <tr>
             <th>Id</th>
-            <th>Müþteri</th>
+            <th>MÃ¼ÅŸteri</th>
             <th>Tarih</th>
             <th>Durum</th>
             <th>Toplam</th>
@@ -125,8 +123,8 @@ Seed, listeleme, ekleme, silme ve ham SQL çalýþtýrma seçenekleri vardýr.</p>
     </tbody>
 </table>
 
-<h4>Ham SQL Çalýþtýr</h4>
-<p>SELECT sorgularý için "Run Query", INSERT/UPDATE/DELETE gibi sorgular için "Run Non-Query" kullanýn.</p>
+<h4>Ham SQL Ã‡alÄ±ÅŸtÄ±r</h4>
+<p>SELECT sorgularÄ± iÃ§in "Run Query", INSERT/UPDATE/DELETE gibi sorgular iÃ§in "Run Non-Query" kullanÄ±n.</p>
 <textarea style="width:100%" rows="6" @bind="rawSql"></textarea>
 <div class="mt-2">
     <button class="btn btn-sm btn-primary me-2" @onclick="RunSqlQuery">Run Query (SELECT)</button>
@@ -136,7 +134,7 @@ Seed, listeleme, ekleme, silme ve ham SQL çalýþtýrma seçenekleri vardýr.</p>
 
 @if (sqlResult != null && sqlResult.Columns.Count > 0)
 {
-    <h5 class="mt-3">Sonuç</h5>
+    <h5 class="mt-3">SonuÃ§</h5>
     <table class="table table-bordered table-sm">
         <thead>
             <tr>
@@ -193,10 +191,10 @@ Seed, listeleme, ekleme, silme ve ham SQL çalýþtýrma seçenekleri vardýr.</p>
 
     private async Task SeedSampleData()
     {
-        // basit örnek veriler ekle (varsa eklemez)
+        // basit Ã¶rnek veriler ekle (varsa eklemez)
         if (await Db.Kategoriler.AnyAsync() || await Db.Urunler.AnyAsync() || await Db.Musteriler.AnyAsync())
         {
-            rawSqlResultMessage = "Veri zaten mevcut. Seed atlanýyor.";
+            rawSqlResultMessage = "Veri zaten mevcut. Seed atlanÄ±yor.";
             return;
         }
 
@@ -204,9 +202,9 @@ Seed, listeleme, ekleme, silme ve ham SQL çalýþtýrma seçenekleri vardýr.</p>
         var cat2 = new UrunSiparisTakip.Models.Kategori { KategoriAdi = "Kitap" };
 
         var p1 = new UrunSiparisTakip.Models.Urun { UrunAdi = "Laptop", SKU = "LP100", BirimFiyat = 7500m, StokAdet = 10, AktifMi = true };
-        var p2 = new UrunSiparisTakip.Models.Urun { UrunAdi = "C# Kitabý", SKU = "BK200", BirimFiyat = 120m, StokAdet = 50, AktifMi = true };
+        var p2 = new UrunSiparisTakip.Models.Urun { UrunAdi = "C# KitabÄ±", SKU = "BK200", BirimFiyat = 120m, StokAdet = 50, AktifMi = true };
 
-        var m1 = new UrunSiparisTakip.Models.Musteri { Ad = "Ahmet", Soyad = "Yýlmaz", Email = "ahmet@example.com" };
+        var m1 = new UrunSiparisTakip.Models.Musteri { Ad = "Ahmet", Soyad = "YÄ±lmaz", Email = "ahmet@example.com" };
         var m2 = new UrunSiparisTakip.Models.Musteri { Ad = "Mehmet", Soyad = "Kara", Email = "mehmet@example.com" };
 
         await Db.Kategoriler.AddRangeAsync(cat1, cat2);
@@ -214,12 +212,12 @@ Seed, listeleme, ekleme, silme ve ham SQL çalýþtýrma seçenekleri vardýr.</p>
         await Db.Musteriler.AddRangeAsync(m1, m2);
         await Db.SaveChangesAsync();
 
-        // iliþki tablosu
+        // iliÅŸki tablosu
         await Db.UrunKategorileri.AddAsync(new UrunSiparisTakip.Models.UrunKategori { UrunId = p1.UrunId, KategoriId = cat1.KategoriId });
         await Db.UrunKategorileri.AddAsync(new UrunSiparisTakip.Models.UrunKategori { UrunId = p2.UrunId, KategoriId = cat2.KategoriId });
         await Db.SaveChangesAsync();
 
-        // sipariþ
+        // sipariÅŸ
         var sip = new UrunSiparisTakip.Models.Siparis { MusteriId = m1.MusteriId, SiparisTarihi = DateTime.Now, Durum = "Beklemede" };
         await Db.Siparisler.AddAsync(sip);
         await Db.SaveChangesAsync();
@@ -229,12 +227,12 @@ Seed, listeleme, ekleme, silme ve ham SQL çalýþtýrma seçenekleri vardýr.</p>
         await Db.SaveChangesAsync();
 
         await LoadAll();
-        rawSqlResultMessage = "Seed tamamlandý.";
+        rawSqlResultMessage = "Seed tamamlandÄ±.";
     }
 
     private async Task AddSampleProduct()
     {
-        var p = new UrunSiparisTakip.Models.Urun { UrunAdi = "Örnek Ürün " + DateTime.Now.Ticks.ToString().Substring(10), SKU = "S" + DateTime.Now.Ticks % 10000, BirimFiyat = 9.99m, StokAdet = 100, AktifMi = true };
+        var p = new UrunSiparisTakip.Models.Urun { UrunAdi = "Ã–rnek ÃœrÃ¼n " + DateTime.Now.Ticks.ToString().Substring(10), SKU = "S" + DateTime.Now.Ticks % 10000, BirimFiyat = 9.99m, StokAdet = 100, AktifMi = true };
         await Db.Urunler.AddAsync(p);
         await Db.SaveChangesAsync();
         await LoadAll();
@@ -245,7 +243,7 @@ Seed, listeleme, ekleme, silme ve ham SQL çalýþtýrma seçenekleri vardýr.</p>
         var p = await Db.Urunler.FindAsync(id);
         if (p != null)
         {
-            // detaylar ve iliþki kayýtlarýný sil
+            // detaylar ve iliÅŸki kayÄ±tlarÄ±nÄ± sil
             var details = Db.SiparisDetaylari.Where(d => d.UrunId == id);
             Db.SiparisDetaylari.RemoveRange(details);
 
@@ -308,7 +306,7 @@ Seed, listeleme, ekleme, silme ve ham SQL çalýþtýrma seçenekleri vardýr.</p>
         rawSqlResultMessage = string.Empty;
         if (string.IsNullOrWhiteSpace(rawSql))
         {
-            rawSqlResultMessage = "Lütfen bir SELECT sorgusu girin.";
+            rawSqlResultMessage = "LÃ¼tfen bir SELECT sorgusu girin.";
             return;
         }
 
@@ -334,14 +332,14 @@ Seed, listeleme, ekleme, silme ve ham SQL çalýþtýrma seçenekleri vardýr.</p>
         rawSqlResultMessage = string.Empty;
         if (string.IsNullOrWhiteSpace(rawSql))
         {
-            rawSqlResultMessage = "Lütfen bir SQL sorgusu girin.";
+            rawSqlResultMessage = "LÃ¼tfen bir SQL sorgusu girin.";
             return;
         }
 
         try
         {
             var affected = await Db.Database.ExecuteSqlRawAsync(rawSql);
-            rawSqlResultMessage = $"Etki: {affected} satýr";
+            rawSqlResultMessage = $"Etki: {affected} satÄ±r";
             await LoadAll();
         }
         catch (Exception ex)

@@ -52,9 +52,13 @@ public sealed class MyDbModel_UnitOfWork<TDbContext>(TDbContext context) : IMyDb
                 {
                     var pagination = new Dictionary<string, string>
                     {
+                        { "page", pageno.ToString() },
+                        { "Page", pageno.ToString() },
                         { "PageNumber", pageno.ToString() },
+                        { "pageSize", pagesize.ToString() },
                         { "PageSize", pagesize.ToString() },
                         { "OrderBy", orderby },
+                        { "orderBy", orderby }
                     };
                     cmd.Parameters.Add(pagination.ToSqlParameter_Table_Type_Dictionary("pagination"));
                 }
