@@ -1,7 +1,7 @@
-namespace Extensions;
-
 using System.Data;
 using Microsoft.Data.SqlClient;
+
+namespace Extensions;
 
 public static class Extensions_SqlParameter
 {

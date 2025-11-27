@@ -1,7 +1,7 @@
-namespace Extensions;
-
 using System.Data;
 using System.Reflection;
+
+namespace Extensions;
 
 public static class Extensions_DataTable
 {

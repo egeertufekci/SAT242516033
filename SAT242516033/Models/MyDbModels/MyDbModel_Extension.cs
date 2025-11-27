@@ -1,5 +1,3 @@
-using Extensions;
-
 namespace MyDbModels;
 
 public static class MyDbModel_Extension
@@ -10,5 +8,4 @@ public static class MyDbModel_Extension
 
         return sortByItems;
     }
-
 }

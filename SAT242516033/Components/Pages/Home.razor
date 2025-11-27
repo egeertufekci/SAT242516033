@@ -1,13 +1,37 @@
 ﻿@page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Ana Sayfa</PageTitle>
 
-<h1>Hello, world!</h1>
-
-Welcome to your new app.
-
-<hr />
-
-<_OrderNav />
-
-<p>Use the Orders pages to test SQL operations via the project's provider and stored procedures.</p>
+<div class="container py-5">
+    <div class="row align-items-center">
+        <div class="col-lg-7">
+            <h1 class="display-5 fw-bold mb-3">SAT242516033</h1>
+            <p class="lead text-secondary mb-4">
+                Ürün kataloğu ve sipariş akışını bir araya getiren bu demo, stoktaki ürünleri yönetmenizi
+                ve müşteriler için hızlıca sipariş oluşturmanızı sağlar. Ürünler sayfasından yeni ürünler
+                ekleyebilir, Siparişler sayfasında ise bu ürünlerle sepet oluşturup siparişe dönüştürebilirsiniz.
+            </p>
+            <div class="d-flex gap-3 flex-wrap">
+                <NavLink class="btn btn-primary btn-lg" href="/urunler">
+                    Ürünleri Yönet
+                </NavLink>
+                <NavLink class="btn btn-outline-primary btn-lg" href="/siparisler">
+                    Siparişler sayfasına git
+                </NavLink>
+            </div>
+        </div>
+        <div class="col-lg-5 mt-4 mt-lg-0">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Projede neler var?</h2>
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2">• Ürün ekleme, güncelleme ve stok takibi</li>
+                        <li class="mb-2">• Sepet oluşturarak sipariş verme ve toplamları takip etme</li>
+                        <li class="mb-2">• Stok güncellemesiyle entegre sipariş kaydetme akışı</li>
+                        <li class="mb-0">• Örnek veri ve yetkilendirme bileşenleri</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -11,7 +11,6 @@ public interface IMyDbModel_UnitOfWork
         where T : class, new();
 }
 
-
 public sealed class MyDbModel_UnitOfWork<TDbContext>(TDbContext context) : IMyDbModel_UnitOfWork where TDbContext : DbContext
 {
     private readonly DbContext _context = context;
@@ -65,10 +64,10 @@ public sealed class MyDbModel_UnitOfWork<TDbContext>(TDbContext context) : IMyDb
                 if (_params?.Any() == true)
                     foreach (var param in _params)
                         cmd.Parameters.Add(param.Value.ToSqlParameter_Data_Type(param.Key));
-                
+
                 //get
                 var table = new DataTable();
-                
+
                 table.Load(await cmd.ExecuteReaderAsync());
 
                 if (isPagination && table.Rows.Count > 0)
@@ -101,6 +100,3 @@ public sealed class MyDbModel_UnitOfWork<TDbContext>(TDbContext context) : IMyDb
         }
     }
 }
-
-
-
