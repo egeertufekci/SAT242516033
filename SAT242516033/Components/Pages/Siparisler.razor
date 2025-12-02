@@ -1,8 +1,11 @@
 ﻿@page "/siparisler"
 @using Microsoft.EntityFrameworkCore
+@using Providers
 @using SAT242516033.Data
 @using UrunSiparisTakip.Models
 @inject ApplicationDbContext Db
+@inject ApplicationDbContext Db
+@inject IMyDbModel_Provider Provider
 
 <PageTitle>Siparişler</PageTitle>
 

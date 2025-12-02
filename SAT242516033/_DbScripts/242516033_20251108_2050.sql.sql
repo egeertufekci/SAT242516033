@@ -3,6 +3,9 @@ GO
 USE SAT242516033;
 GO
 
+IF OBJECT_ID('dbo.trg_SiparisDetaylari_AI','TR') IS NOT NULL DROP TRIGGER dbo.trg_SiparisDetaylari_AI;
+IF OBJECT_ID('dbo.trg_SiparisDetaylari_AU','TR') IS NOT NULL DROP TRIGGER dbo.trg_SiparisDetaylari_AU;
+IF OBJECT_ID('dbo.trg_SiparisDetaylari_AD','TR') IS NOT NULL DROP TRIGGER dbo.trg_SiparisDetaylari_AD;
 IF OBJECT_ID('dbo.sp_SiparisOlustur_TVP','P') IS NOT NULL DROP PROCEDURE dbo.sp_SiparisOlustur_TVP;
 IF OBJECT_ID('dbo.sp_SiparisEkle','P') IS NOT NULL DROP PROCEDURE dbo.sp_SiparisEkle;
 IF OBJECT_ID('dbo.sp_UrunListele','P') IS NOT NULL DROP PROCEDURE dbo.sp_UrunListele;
@@ -33,7 +36,63 @@ EXEC('CREATE TYPE dbo.tt_SiparisDetay AS TABLE
     UNIQUE(UrunId)
 );');
 GO
-@@ -91,111 +94,151 @@ SELECT
+
+CREATE TABLE dbo.Musteriler
+(
+    MusteriId INT IDENTITY(1,1) CONSTRAINT PK_Musteriler PRIMARY KEY,
+    Ad NVARCHAR(100) NOT NULL,
+    Soyad NVARCHAR(100) NOT NULL,
+    Email NVARCHAR(255) NOT NULL
+);
+
+CREATE TABLE dbo.Kategoriler
+(
+    KategoriId INT IDENTITY(1,1) CONSTRAINT PK_Kategoriler PRIMARY KEY,
+    KategoriAdi NVARCHAR(150) NOT NULL
+);
+
+CREATE TABLE dbo.Urunler
+(
+    UrunId INT IDENTITY(1,1) CONSTRAINT PK_Urunler PRIMARY KEY,
+    UrunAdi NVARCHAR(200) NOT NULL,
+    SKU NVARCHAR(64) NOT NULL,
+    BirimFiyat DECIMAL(10,2) NOT NULL,
+    StokAdet INT NOT NULL CONSTRAINT DF_Urunler_StokAdet DEFAULT(0),
+    AktifMi BIT NOT NULL CONSTRAINT DF_Urunler_AktifMi DEFAULT(1)
+);
+
+CREATE TABLE dbo.Siparisler
+(
+    SiparisId INT IDENTITY(1,1) CONSTRAINT PK_Siparisler PRIMARY KEY,
+    MusteriId INT NOT NULL CONSTRAINT FK_Siparisler_Musteriler REFERENCES dbo.Musteriler(MusteriId) ON DELETE CASCADE,
+    SiparisTarihi DATETIME2 NOT NULL CONSTRAINT DF_Siparisler_SiparisTarihi DEFAULT(SYSDATETIME()),
+    Durum dbo.DurumType NOT NULL CONSTRAINT DF_Siparisler_Durum DEFAULT(N'Beklemede')
+);
+
+CREATE TABLE dbo.UrunKategorileri
+(
+    UrunId INT NOT NULL,
+    KategoriId INT NOT NULL,
+    CONSTRAINT PK_UrunKategorileri PRIMARY KEY (UrunId, KategoriId),
+    CONSTRAINT FK_UrunKategorileri_Urunler FOREIGN KEY (UrunId) REFERENCES dbo.Urunler(UrunId) ON DELETE CASCADE,
+    CONSTRAINT FK_UrunKategorileri_Kategoriler FOREIGN KEY (KategoriId) REFERENCES dbo.Kategoriler(KategoriId) ON DELETE CASCADE
+);
+
+CREATE TABLE dbo.SiparisDetaylari
+(
+    SiparisDetayId INT IDENTITY(1,1) CONSTRAINT PK_SiparisDetaylari PRIMARY KEY,
+    SiparisId INT NOT NULL CONSTRAINT FK_SiparisDetaylari_Siparisler REFERENCES dbo.Siparisler(SiparisId) ON DELETE CASCADE,
+    UrunId INT NOT NULL CONSTRAINT FK_SiparisDetaylari_Urunler REFERENCES dbo.Urunler(UrunId) ON DELETE CASCADE,
+    Miktar INT NOT NULL CHECK (Miktar > 0),
+    BirimFiyat DECIMAL(10,2) NOT NULL CHECK (BirimFiyat >= 0)
+);
+GO
+
+CREATE VIEW dbo.vw_SiparisOzet AS
+SELECT
+    s.SiparisId,
+    s.SiparisTarihi,
+    m.Ad + N' ' + m.Soyad AS Musteri,
     s.Durum,
     SUM(sd.Miktar * sd.BirimFiyat) AS ToplamTutar
 FROM dbo.Siparisler s
@@ -43,7 +102,7 @@ GROUP BY s.SiparisId, s.SiparisTarihi, m.Ad, m.Soyad, s.Durum;
 GO
 
 CREATE VIEW dbo.vw_SiparisDetay AS
-SELECT 
+SELECT
   sd.SiparisDetayId,
   sd.SiparisId,
   s.SiparisTarihi,
@@ -69,45 +128,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE dbo.sp_UrunEkle
-    @UrunAdi NVARCHAR(200),
-    @SKU NVARCHAR(64),
-    @BirimFiyat DECIMAL(10,2),
-    @StokAdet INT = 0,
-    @AktifMi BIT = 1
-AS
-BEGIN
-    SET NOCOUNT ON;
-    INSERT INTO dbo.Urunler(UrunAdi,SKU,BirimFiyat,StokAdet,AktifMi)
-    VALUES(@UrunAdi,@SKU,@BirimFiyat,ISNULL(@StokAdet,0),ISNULL(@AktifMi,1));
-END;
-GO
-
-CREATE OR ALTER PROCEDURE dbo.sp_UrunGuncelle
-    @UrunId INT,
-    @UrunAdi NVARCHAR(200),
-    @SKU NVARCHAR(64),
-    @BirimFiyat DECIMAL(10,2),
-    @StokAdet INT,
-    @AktifMi BIT
-AS
-BEGIN
-    SET NOCOUNT ON;
-    UPDATE dbo.Urunler
-    SET UrunAdi = @UrunAdi,
-        SKU = @SKU,
-        BirimFiyat = @BirimFiyat,
-        StokAdet = ISNULL(@StokAdet, 0),
-        AktifMi = ISNULL(@AktifMi, 1)
-    WHERE UrunId = @UrunId;
-END;
-GO
-
-CREATE OR ALTER PROCEDURE dbo.sp_UrunSil
-    @UrunId INT
-AS
-BEGIN
-    SET NOCOUNT ON;
+@@ -111,77 +170,160 @@ BEGIN
     DELETE FROM dbo.Urunler WHERE UrunId = @UrunId;
 END;
 GO
@@ -133,7 +154,7 @@ BEGIN
     SET NOCOUNT ON;
     IF NOT EXISTS (SELECT 1 FROM @Detaylar)
     BEGIN
-        RAISERROR (N'Detay listesi bo olamaz.',16,1);
+        RAISERROR (N'Detay listesi boþ olamaz.',16,1);
         RETURN;
     END
     BEGIN TRAN;
@@ -154,17 +175,100 @@ BEGIN
 END;
 GO
 
+CREATE OR ALTER TRIGGER dbo.trg_SiparisDetaylari_AI
+ON dbo.SiparisDetaylari
+AFTER INSERT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    ;WITH cte AS (
+        SELECT UrunId, SUM(Miktar) AS ToplamMiktar
+        FROM inserted
+        GROUP BY UrunId
+    )
+    IF EXISTS (
+        SELECT 1
+        FROM cte c
+        JOIN dbo.Urunler u ON u.UrunId = c.UrunId
+        WHERE u.StokAdet < c.ToplamMiktar
+    )
+    BEGIN
+        RAISERROR(N'Yeterli stok bulunmuyor.',16,1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
+
+    UPDATE u
+    SET StokAdet = u.StokAdet - c.ToplamMiktar
+    FROM dbo.Urunler u
+    JOIN cte c ON c.UrunId = u.UrunId;
+END;
+GO
+
+CREATE OR ALTER TRIGGER dbo.trg_SiparisDetaylari_AU
+ON dbo.SiparisDetaylari
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    ;WITH delta AS (
+        SELECT COALESCE(i.UrunId, d.UrunId) AS UrunId,
+               ISNULL(i.Miktar,0) - ISNULL(d.Miktar,0) AS MiktarDegisim
+        FROM inserted i
+        FULL JOIN deleted d ON i.SiparisDetayId = d.SiparisDetayId
+    ), agg AS (
+        SELECT UrunId, SUM(MiktarDegisim) AS ToplamDegisim
+        FROM delta
+        GROUP BY UrunId
+    )
+    IF EXISTS (
+        SELECT 1
+        FROM agg a
+        JOIN dbo.Urunler u ON u.UrunId = a.UrunId
+        WHERE a.ToplamDegisim > 0 AND u.StokAdet < a.ToplamDegisim
+    )
+    BEGIN
+        RAISERROR(N'Yeterli stok bulunmuyor.',16,1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
+
+    UPDATE u
+    SET StokAdet = u.StokAdet - a.ToplamDegisim
+    FROM dbo.Urunler u
+    JOIN agg a ON a.UrunId = u.UrunId;
+END;
+GO
+
+CREATE OR ALTER TRIGGER dbo.trg_SiparisDetaylari_AD
+ON dbo.SiparisDetaylari
+AFTER DELETE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    ;WITH cte AS (
+        SELECT UrunId, SUM(Miktar) AS ToplamMiktar
+        FROM deleted
+        GROUP BY UrunId
+    )
+    UPDATE u
+    SET StokAdet = u.StokAdet + c.ToplamMiktar
+    FROM dbo.Urunler u
+    JOIN cte c ON c.UrunId = u.UrunId;
+END;
+GO
+
 INSERT INTO dbo.Musteriler(Ad,Soyad,Email) VALUES
-(N'Ali',N'Ko',N'ali@example.com'),
-(N'Veli',N'Bo',N'veli@example.com'),
-(N'Melih',N'Co',N'melih@example.com');
+(N'Ali',N'Koç',N'ali@example.com'),
+(N'Veli',N'Boz',N'veli@example.com'),
+(N'Melih',N'Coþkun',N'melih@example.com');
 
 INSERT INTO dbo.Kategoriler(KategoriAdi) VALUES
 (N'Elektronik'),(N'Kitap'),(N'Giyim');
 
-EXEC dbo.sp_UrunEkle N'Kulaklk',N'SKU-1001',299.90,50;
-EXEC dbo.sp_UrunEkle N'Roman Kitab',N'SKU-2001',89.90,120;
-EXEC dbo.sp_UrunEkle N'Tirt',N'SKU-3001',149.90,80;
+EXEC dbo.sp_UrunEkle N'Kulaklýk',N'SKU-1001',299.90,50;
+EXEC dbo.sp_UrunEkle N'Roman Kitabý',N'SKU-2001',89.90,120;
+EXEC dbo.sp_UrunEkle N'Tiþört',N'SKU-3001',149.90,80;
 
 INSERT INTO dbo.UrunKategorileri(UrunId,KategoriId) VALUES (1,1),(2,2),(3,3);
 
@@ -176,7 +280,7 @@ INSERT INTO @Yeni1 EXEC dbo.sp_SiparisOlustur_TVP @MusteriId=1,@Durum=N'Beklemed
 DECLARE @d2 dbo.tt_SiparisDetay;
 INSERT INTO @d2(UrunId,Miktar,BirimFiyat) VALUES (2,3,89.90);
 DECLARE @Yeni2 TABLE(SiparisId INT);
-INSERT INTO @Yeni2 EXEC dbo.sp_SiparisOlustur_TVP @MusteriId=2,@Durum=N'Onayland',@Detaylar=@d2;
+INSERT INTO @Yeni2 EXEC dbo.sp_SiparisOlustur_TVP @MusteriId=2,@Durum=N'Onaylandý',@Detaylar=@d2;
 
 DECLARE @d3 dbo.tt_SiparisDetay;
 INSERT INTO @d3(UrunId,Miktar,BirimFiyat) VALUES (3,1,149.90);

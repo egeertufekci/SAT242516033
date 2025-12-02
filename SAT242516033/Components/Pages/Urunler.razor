@@ -1,10 +1,13 @@
 ﻿@page "/urunler"
+@using Providers
 @using SAT242516033.Data
 @using UrunSiparisTakip.Models
 @using Microsoft.EntityFrameworkCore
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Components.Forms
 @inject ApplicationDbContext Db
+@inject ApplicationDbContext Db
+@inject IMyDbModel_Provider Provider
 
 <h2 class="mt-3">Ürünler</h2>
 
