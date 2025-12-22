@@ -1,302 +1,299 @@
 ﻿@page "/urunler"
-@using Providers
-@using SAT242516033.Data
-@using UrunSiparisTakip.Models
 @using Microsoft.EntityFrameworkCore
+@using SAT242516033.Data
 @using System.ComponentModel.DataAnnotations
-@using Microsoft.AspNetCore.Components.Forms
+@using UrunSiparisTakip.Models
+
 @inject ApplicationDbContext Db
-@inject ApplicationDbContext Db
-@inject IMyDbModel_Provider Provider
 
 <h2 class="mt-3">Ürünler</h2>
 
-@if (!string.IsNullOrWhiteSpace(statusMessage))
+@if (!string.IsNullOrWhiteSpace(_statusMessage))
 {
-    <div class="alert @statusClass" role="alert">@statusMessage</div>
+    <div class="alert @_statusClass" role="alert">@_statusMessage</div>
 }
 
-<div class="row g-3 align-items-start mt-2">
-    <div class="col-12 col-xl-8 col-xxl-9">
-        <div class="card shadow-sm">
-            <div class="card-body p-3">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h5 class="text-primary mb-0">Ürün Listesi</h5>
-                    <button class="btn btn-outline-primary btn-sm" @onclick="RefreshAsync">Listeyi Yenile</button>
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-striped table-sm align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th style="width: 60px;">#</th>
-                                <th>Ad</th>
-                                <th style="width: 120px;">SKU</th>
-                                <th style="width: 120px;">Fiyat</th>
-                                <th style="width: 100px;">Stok</th>
-                                <th class="text-nowrap" style="width: 170px;">İşlemler</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @if (list is null)
-                            {
-                                <tr><td colspan="6">Veriler yükleniyor...</td></tr>
-                            }
-                            else if (list.Count == 0)
-                            {
-                                <tr><td colspan="6">Henüz ürün yok.</td></tr>
-                            }
-                            else
-                            {
-                                @for (var i = 0; i < list.Count; i++)
-                                {
-                                    var u = list[i];
-                                    var siraNo = i + 1;
-                                    bool editing = editingId == u.UrunId;
-                                    <tr class="@(editing ? "table-warning" : string.Empty)">
-                                        <td class="fw-semibold">@siraNo</td>
-                                        <td>
-                                            @if (editing)
-                                            {
-                                                <input class="form-control form-control-sm" @bind="editModel.UrunAdi" />
-                                            }
-                                            else
-                                            {
-                                                @u.UrunAdi
-                                            }
-                                        </td>
-                                        <td>
-                                            @if (editing)
-                                            {
-                                                <input class="form-control form-control-sm" name="editSku" autocomplete="off" @bind="editModel.SKU" />
-                                            }
-                                            else
-                                            {
-                                                @u.SKU
-                                            }
-                                        </td>
-                                        <td>
-                                            @if (editing)
-                                            {
-                                                <input class="form-control form-control-sm" type="number" step="0.01" @bind="editModel.BirimFiyat" />
-                                            }
-                                            else
-                                            {
-                                                @u.BirimFiyat
-                                            }
-                                        </td>
-                                        <td>
-                                            @if (editing)
-                                            {
-                                                <input class="form-control form-control-sm" type="number" @bind="editModel.StokAdet" />
-                                            }
-                                            else
-                                            {
-                                                @u.StokAdet
-                                            }
-                                        </td>
-                                        <td class="text-nowrap">
-                                            @if (editing)
-                                            {
-                                                <button class="btn btn-success btn-sm me-1" @onclick="SaveEditAsync">Kaydet</button>
-                                                <button class="btn btn-outline-secondary btn-sm me-1" @onclick="CancelEdit">Vazgeç</button>
-                                                <button class="btn btn-danger btn-sm" @onclick="() => RemoveAsync(u.UrunId)">Sil</button>
-                                            }
-                                            else
-                                            {
-                                                <button class="btn btn-outline-warning btn-sm me-1" @onclick="() => StartEdit(u)">Güncelle</button>
-                                                <button class="btn btn-outline-danger btn-sm" @onclick="() => RemoveAsync(u.UrunId)">Sil</button>
-                                            }
-                                        </td>
-                                    </tr>
-                                }
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+@if (_operation == "list")
+{
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <button class="btn btn-outline-success" @onclick="OnClick_New">Yeni</button>
+        <button class="btn btn-outline-primary" @onclick="RefreshAsync">Listeyi Yenile</button>
+    </div>
+
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th style="width: 150px;">İşlemler</th>
+                <th>#</th>
+                <th>Ad</th>
+                <th>SKU</th>
+                <th>Fiyat</th>
+                <th>Stok</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (_list is null)
+            {
+                <tr><td colspan="6">Veriler yükleniyor...</td></tr>
+            }
+            else if (_list.Count == 0)
+            {
+                <tr><td colspan="6">Henüz ürün yok.</td></tr>
+            }
+            else
+            {
+                @for (var i = 0; i < _list.Count; i++)
+                {
+                    var item = _list[i];
+                    <tr>
+                        <td class="text-nowrap">
+                            <button class="btn btn-outline-warning btn-sm me-1" @onclick="() => OnClick_Edit(item.UrunId)">Güncelle</button>
+                            <button class="btn btn-outline-danger btn-sm" @onclick="() => OnClick_Remove(item.UrunId)">Sil</button>
+                        </td>
+                        <td>@(i + 1)</td>
+                        <td>@item.UrunAdi</td>
+                        <td>@item.SKU</td>
+                        <td>@item.BirimFiyat</td>
+                        <td>@item.StokAdet</td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+}
+
+@if (_operation == "new")
+{
+    <h5>Yeni Ürün</h5>
+    <div class="mb-2">
+        <label>Ürün Adı</label>
+        <input class="form-control" @bind="_model.UrunAdi" />
+    </div>
+    <div class="mb-2">
+        <label>SKU</label>
+        <input class="form-control" autocomplete="off" @bind="_model.SKU" />
+    </div>
+    <div class="row g-2 mb-2">
+        <div class="col-md-6">
+            <label>Fiyat</label>
+            <input class="form-control" type="number" step="0.01" @bind="_model.BirimFiyat" />
+        </div>
+        <div class="col-md-6">
+            <label>Stok</label>
+            <input class="form-control" type="number" @bind="_model.StokAdet" />
         </div>
     </div>
-    <div class="col-12 col-xl-4 col-xxl-3">
-        <div class="card border-success shadow-sm sticky-top" style="top: 90px;">
-            <div class="card-header fw-bold py-2">Ürün Ekle</div>
-            <div class="card-body p-3">
-                <EditForm Model="newUrun" OnValidSubmit="AddAsync">
-                    <DataAnnotationsValidator />
-                    <ValidationSummary />
-                    <div class="mb-2">
-                        <label class="form-label mb-1" for="urunAdiInput">Ürün Adı</label>
-                        <InputText id="urunAdiInput" class="form-control form-control-sm" autocomplete="off" @bind-Value="newUrun.UrunAdi" />
-                        <ValidationMessage For="() => newUrun.UrunAdi" />
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label mb-1" for="skuInput">SKU</label>
-                        <InputText id="skuInput" name="newSku" class="form-control form-control-sm" autocomplete="off" inputmode="text" @bind-Value="newUrun.SKU" />
-                        <ValidationMessage For="() => newUrun.SKU" />
-                    </div>
-                    <div class="row g-2 mb-2">
-                        <div class="col-6">
-                            <label class="form-label mb-1" for="fiyatInput">Fiyat</label>
-                            <InputNumber id="fiyatInput" class="form-control form-control-sm" TValue="decimal" @bind-Value="newUrun.BirimFiyat" />
-                            <ValidationMessage For="() => newUrun.BirimFiyat" />
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label mb-1" for="stokInput">Stok</label>
-                            <InputNumber id="stokInput" class="form-control form-control-sm" TValue="int" @bind-Value="newUrun.StokAdet" />
-                            <ValidationMessage For="() => newUrun.StokAdet" />
-                        </div>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button type="reset" class="btn btn-outline-secondary btn-sm" @onclick="ResetNewForm">Temizle</button>
-                        <button class="btn btn-success btn-sm" type="submit">Ekle</button>
-                    </div>
-                </EditForm>
-            </div>
+    <button class="btn btn-success me-2" @onclick="OnClick_Add">Ekle</button>
+    <button class="btn btn-outline-dark" @onclick="OnClick_Cancel">Vazgeç</button>
+}
+
+@if (_operation == "edit")
+{
+    <h5>Ürün Güncelle</h5>
+    <div class="mb-2">
+        <label>Ürün Adı</label>
+        <input class="form-control" @bind="_model.UrunAdi" />
+    </div>
+    <div class="mb-2">
+        <label>SKU</label>
+        <input class="form-control" autocomplete="off" @bind="_model.SKU" />
+    </div>
+    <div class="row g-2 mb-2">
+        <div class="col-md-6">
+            <label>Fiyat</label>
+            <input class="form-control" type="number" step="0.01" @bind="_model.BirimFiyat" />
+        </div>
+        <div class="col-md-6">
+            <label>Stok</label>
+            <input class="form-control" type="number" @bind="_model.StokAdet" />
         </div>
     </div>
-</div>
+    <button class="btn btn-warning me-2" @onclick="OnClick_Update">Güncelle</button>
+    <button class="btn btn-outline-dark" @onclick="OnClick_Cancel">Vazgeç</button>
+}
+
+@if (_operation == "remove")
+{
+    <h5>Ürünü Sil</h5>
+    <p>"@_model.UrunAdi" adlı ürünü silmek istediğinize emin misiniz?</p>
+    <button class="btn btn-danger me-2" @onclick="OnClick_Save">Sil</button>
+    <button class="btn btn-outline-dark" @onclick="OnClick_Cancel">Vazgeç</button>
+}
 
 @code {
-    List<Urun>? list;
+    private string _operation = "list";
 
-    string? statusMessage;
-    string statusClass = "alert-info";
+    private List<Urun>? _list;
+    private UrunFormModel _model = new();
 
-    UrunInputModel newUrun = new();
-    Urun editModel = new();
-    int? editingId;
+    private string? _statusMessage;
+    private string _statusClass = "alert-info";
 
     protected override async Task OnInitializedAsync()
     {
         await RefreshAsync();
     }
 
-    async Task RefreshAsync()
+    private async Task RefreshAsync()
     {
         Db.ChangeTracker.Clear();
-        list = await Db.Urunler
+        _list = await Db.Urunler
             .AsNoTracking()
             .OrderBy(x => x.UrunId)
             .ToListAsync();
         StateHasChanged();
     }
 
-    void ResetNewForm() => newUrun = new();
-    void CancelEdit()
+    private void OnClick_New()
     {
-        editingId = null;
-        editModel = new();
+        _operation = "new";
+        _model = new();
     }
 
-    void StartEdit(Urun u)
+    private void OnClick_Edit(int? id)
     {
-        editingId = u.UrunId;
-        editModel = new Urun
+        _operation = "edit";
+        var ent = _list?.FirstOrDefault(x => x.UrunId == id);
+        if (ent is not null)
         {
-            UrunId = u.UrunId,
-            UrunAdi = u.UrunAdi,
-            SKU = u.SKU,
-            BirimFiyat = u.BirimFiyat,
-            StokAdet = u.StokAdet,
-            AktifMi = u.AktifMi
-        };
+            _model = new UrunFormModel
+            {
+                UrunId = ent.UrunId,
+                UrunAdi = ent.UrunAdi,
+                SKU = ent.SKU,
+                BirimFiyat = ent.BirimFiyat,
+                StokAdet = ent.StokAdet
+            };
+        }
     }
 
-    async Task AddAsync()
+    private void OnClick_Remove(int? id)
+    {
+        _operation = "remove";
+        var ent = _list?.FirstOrDefault(x => x.UrunId == id);
+        if (ent is not null)
+        {
+            _model = new UrunFormModel
+            {
+                UrunId = ent.UrunId,
+                UrunAdi = ent.UrunAdi,
+                SKU = ent.SKU,
+                BirimFiyat = ent.BirimFiyat,
+                StokAdet = ent.StokAdet
+            };
+        }
+    }
+
+    private void OnClick_Cancel()
+    {
+        _operation = "list";
+        _statusMessage = null;
+    }
+
+    private async Task OnClick_Add()
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(newUrun.UrunAdi) || string.IsNullOrWhiteSpace(newUrun.SKU))
+            if (string.IsNullOrWhiteSpace(_model.UrunAdi) || string.IsNullOrWhiteSpace(_model.SKU))
             {
-                statusMessage = "Ürün adı ve SKU zorunludur.";
-                statusClass = "alert-warning";
+                _statusMessage = "Ürün adı ve SKU zorunludur.";
+                _statusClass = "alert-warning";
                 return;
             }
 
-            var sku = newUrun.SKU.Trim();
-            var ad = newUrun.UrunAdi.Trim();
-
             var entity = new Urun
             {
-                UrunAdi = ad,
-                SKU = sku,
-                BirimFiyat = newUrun.BirimFiyat,
-                StokAdet = newUrun.StokAdet,
+                UrunAdi = _model.UrunAdi.Trim(),
+                SKU = _model.SKU.Trim(),
+                BirimFiyat = _model.BirimFiyat,
+                StokAdet = _model.StokAdet,
                 AktifMi = true
             };
 
             await Db.Urunler.AddAsync(entity);
             await Db.SaveChangesAsync();
-            statusMessage = "Ürün başarıyla eklendi.";
-            statusClass = "alert-success";
-            ResetNewForm();
+            _statusMessage = "Ürün başarıyla eklendi.";
+            _statusClass = "alert-success";
+            _operation = "list";
             await RefreshAsync();
         }
         catch (Exception ex)
         {
             var detail = ex.InnerException?.Message ?? ex.Message;
-            statusMessage = $"Ürün eklenirken hata oluştu: {detail}";
-            statusClass = "alert-danger";
+            _statusMessage = $"Ürün eklenirken hata oluştu: {detail}";
+            _statusClass = "alert-danger";
             Db.ChangeTracker.Clear();
-            ResetNewForm();
         }
     }
 
-    async Task SaveEditAsync()
+    private async Task OnClick_Update()
     {
         try
         {
-            if (editingId is null)
+            if (_model.UrunId is null)
             {
-                statusMessage = "Güncellenecek ürün seçili değil.";
-                statusClass = "alert-warning";
+                _statusMessage = "Güncellenecek ürün bulunamadı.";
+                _statusClass = "alert-warning";
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(editModel.UrunAdi) || string.IsNullOrWhiteSpace(editModel.SKU))
+            if (string.IsNullOrWhiteSpace(_model.UrunAdi) || string.IsNullOrWhiteSpace(_model.SKU))
             {
-                statusMessage = "Ürün adı ve SKU zorunludur.";
-                statusClass = "alert-warning";
+                _statusMessage = "Ürün adı ve SKU zorunludur.";
+                _statusClass = "alert-warning";
                 return;
             }
 
-            var ent = await Db.Urunler.FindAsync(editingId.Value);
+            var ent = await Db.Urunler.FindAsync(_model.UrunId.Value);
             if (ent is not null)
             {
-                ent.UrunAdi = editModel.UrunAdi.Trim();
-                ent.SKU = editModel.SKU.Trim();
-                ent.BirimFiyat = editModel.BirimFiyat;
-                ent.StokAdet = editModel.StokAdet;
+                ent.UrunAdi = _model.UrunAdi.Trim();
+                ent.SKU = _model.SKU.Trim();
+                ent.BirimFiyat = _model.BirimFiyat;
+                ent.StokAdet = _model.StokAdet;
                 ent.AktifMi = true;
                 await Db.SaveChangesAsync();
-                statusMessage = "Ürün güncellendi.";
-                statusClass = "alert-success";
-                CancelEdit();
+                _statusMessage = "Ürün güncellendi.";
+                _statusClass = "alert-success";
+                _operation = "list";
                 await RefreshAsync();
             }
             else
             {
-                statusMessage = "Güncellenecek ürün bulunamadı.";
-                statusClass = "alert-warning";
-                CancelEdit();
+                _statusMessage = "Güncellenecek ürün bulunamadı.";
+                _statusClass = "alert-warning";
             }
         }
         catch (Exception ex)
         {
             var detail = ex.InnerException?.Message ?? ex.Message;
-            statusMessage = $"Ürün güncellenemedi: {detail}";
-            statusClass = "alert-danger";
+            _statusMessage = $"Ürün güncellenemedi: {detail}";
+            _statusClass = "alert-danger";
         }
     }
 
-    async Task RemoveAsync(int id)
+    private async Task OnClick_Save()
+    {
+        if (_model.UrunId is null)
+        {
+            _statusMessage = "Silinecek ürün bulunamadı.";
+            _statusClass = "alert-warning";
+            return;
+        }
+
+        await RemoveAsync(_model.UrunId.Value);
+        _operation = "list";
+    }
+
+    private async Task RemoveAsync(int id)
     {
         try
         {
             var ent = await Db.Urunler.FindAsync(id);
             if (ent is null)
             {
-                statusMessage = "Silinecek ürün bulunamadı.";
-                statusClass = "alert-warning";
+                _statusMessage = "Silinecek ürün bulunamadı.";
+                _statusClass = "alert-warning";
                 return;
             }
 
@@ -339,24 +336,22 @@
             await Db.SaveChangesAsync();
             await transaction.CommitAsync();
 
-            statusMessage = "Ürün ve ilişkili sipariş detayları silindi.";
-            statusClass = "alert-success";
-            if (editingId == id)
-            {
-                CancelEdit();
-            }
+            _statusMessage = "Ürün ve ilişkili sipariş detayları silindi.";
+            _statusClass = "alert-success";
             await RefreshAsync();
         }
         catch (Exception ex)
         {
             var detail = ex.InnerException?.Message ?? ex.Message;
-            statusMessage = $"Ürün silinemedi: {detail}";
-            statusClass = "alert-danger";
+            _statusMessage = $"Ürün silinemedi: {detail}";
+            _statusClass = "alert-danger";
         }
     }
 
-    public class UrunInputModel
+    public class UrunFormModel
     {
+        public int? UrunId { get; set; }
+
         [Required(ErrorMessage = "Ürün adı gereklidir.")]
         [MaxLength(200, ErrorMessage = "Ürün adı 200 karakteri geçemez.")]
         public string UrunAdi { get; set; } = string.Empty;

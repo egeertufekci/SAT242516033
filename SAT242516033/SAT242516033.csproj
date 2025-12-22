@@ -21,8 +21,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Components\Pages\NewFolder\" />
     <Folder Include="Models\DbContexts\" />
   </ItemGroup>
+
+  <ProjectExtensions><VisualStudio><UserProperties appsettings_1json__JsonSchema="https://www.schemastore.org/artifacthub-repo.json" /></VisualStudio></ProjectExtensions>
 
 </Project>
