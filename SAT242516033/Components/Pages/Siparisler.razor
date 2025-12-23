@@ -2,6 +2,7 @@
 @using MyDbModels
 @using Providers
 @using System.Text.Json
+@using Microsoft.JSInterop
 
 @inject IMyDbModel<Model> _myDbModel
 @inject IMyDbModel_Provider _myDbModel_Provider
@@ -15,6 +16,45 @@
 {
     @if (_operation == "list")
     {
+        <!-- Filtre + Sıralama + Sayfalama -->
+        <div class="row g-2 align-items-end mb-3">
+            <div class="col-md-4">
+                <label class="form-label">Filtre (Durum / MusteriId / SiparisId)</label>
+                <input class="form-control" @bind="filterText" @bind:event="oninput" />
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Sırala</label>
+                <select class="form-select" @bind="sortBy">
+                    <option value="SiparisId">SiparisId</option>
+                    <option value="MusteriId">MusteriId</option>
+                    <option value="SiparisTarihi">SiparisTarihi</option>
+                    <option value="Durum">Durum</option>
+                </select>
+            </div>
+
+            <select class="form-select"
+                    value="@sortAsc"
+                    @onchange="OnSortAscChanged">
+                <option value="true">Artan</option>
+                <option value="false">Azalan</option>
+            </select>
+
+
+            <select class="form-select"
+                    value="@pageSize"
+                    @onchange="OnPageSizeChanged">
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="20">20</option>
+            </select>
+
+
+            <div class="col-md-1">
+                <button class="btn btn-outline-secondary w-100" title="Başa dön" @onclick="ResetPaging">↺</button>
+            </div>
+        </div>
+
         <table class="table table-striped">
             <thead>
                 <tr>
@@ -29,11 +69,10 @@
                     <th>MusteriId</th>
                     <th>SiparisTarihi</th>
                     <th>Durum</th>
-
                 </tr>
             </thead>
             <tbody>
-                @foreach (var item in _myDbModel.Items)
+                @foreach (var item in PagedItems())
                 {
                     <tr>
                         <td>
@@ -55,6 +94,24 @@
                 }
             </tbody>
         </table>
+
+        <div class="d-flex justify-content-between align-items-center mt-2">
+            <div>
+                Toplam: @FilteredSortedItems().Count() kayıt —
+                Sayfa: @currentPage / @TotalPages()
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-outline-primary" @onclick="PrevPage" disabled="@(currentPage == 1)">Önceki</button>
+                <button class="btn btn-outline-primary" @onclick="NextPage" disabled="@(currentPage == TotalPages())">Sonraki</button>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(_myDbModel.Message))
+        {
+            <div class="alert alert-warning mt-2">
+                @_myDbModel.Message
+            </div>
+        }
     }
 
     @if (_operation == "new")
@@ -63,14 +120,8 @@
         <input type="text" @bind="_model.SiparisTarihi" placeholder="SiparisTarihi (örn: 2025-12-22 10:30)" />
         <input type="text" @bind="_model.Durum" placeholder="Durum" />
 
-        <button class="btn btn-success"
-                @onclick="() => OnClick_Add()">
-            Add
-        </button>
-        <button class="btn btn-outline-dark"
-                @onclick="() => OnClick_Cancel()">
-            Cancel
-        </button>
+        <button class="btn btn-success" @onclick="() => OnClick_Add()">Add</button>
+        <button class="btn btn-outline-dark" @onclick="() => OnClick_Cancel()">Cancel</button>
     }
 
     @if (_operation == "edit")
@@ -79,14 +130,8 @@
         <input type="text" @bind="_model.SiparisTarihi" placeholder="SiparisTarihi (örn: 2025-12-22 10:30)" />
         <input type="text" @bind="_model.Durum" placeholder="Durum" />
 
-        <button class="btn btn-warning"
-                @onclick="() => OnClick_Update()">
-            Update
-        </button>
-        <button class="btn btn-outline-dark"
-                @onclick="() => OnClick_Cancel()">
-            Cancel
-        </button>
+        <button class="btn btn-warning" @onclick="() => OnClick_Update()">Update</button>
+        <button class="btn btn-outline-dark" @onclick="() => OnClick_Cancel()">Cancel</button>
     }
 
     @if (_operation == "remove")
@@ -95,26 +140,95 @@
         <input type="text" @bind="_model.SiparisTarihi" readonly />
         <input type="text" @bind="_model.Durum" readonly />
 
-        <button class="btn btn-danger"
-                @onclick="() => OnClick_Save()">
-            Remove
-        </button>
-        <button class="btn btn-outline-dark"
-                @onclick="() => OnClick_Cancel()">
-            Cancel
-        </button>
+        <button class="btn btn-danger" @onclick="() => OnClick_Save()">Remove</button>
+        <button class="btn btn-outline-dark" @onclick="() => OnClick_Cancel()">Cancel</button>
     }
 }
 
 @code {
-
     string _operation = "list";
     Model _model = new Model();
+
+    // Filtre / Sıralama / Sayfalama
+    private string filterText = "";
+    private string sortBy = "SiparisId";
+    private bool sortAsc = false;
+
+    private int pageSize = 10;
+    private int currentPage = 1;
+
+    private void ResetPaging() => currentPage = 1;
+
+    private IEnumerable<Model> FilteredSortedItems()
+    {
+        IEnumerable<Model> q = _myDbModel?.Items ?? new List<Model>();
+
+        if (!string.IsNullOrWhiteSpace(filterText))
+        {
+            var f = filterText.Trim().ToLowerInvariant();
+            q = q.Where(x =>
+                x.SiparisId.ToString().Contains(f) ||
+                x.MusteriId.ToString().Contains(f) ||
+                (x.Durum ?? "").ToLowerInvariant().Contains(f));
+        }
+
+        q = sortBy switch
+        {
+            "MusteriId" => sortAsc ? q.OrderBy(x => x.MusteriId) : q.OrderByDescending(x => x.MusteriId),
+            "SiparisTarihi" => sortAsc ? q.OrderBy(x => x.SiparisTarihi) : q.OrderByDescending(x => x.SiparisTarihi),
+            "Durum" => sortAsc ? q.OrderBy(x => x.Durum) : q.OrderByDescending(x => x.Durum),
+            _ => sortAsc ? q.OrderBy(x => x.SiparisId) : q.OrderByDescending(x => x.SiparisId),
+        };
+
+        return q;
+    }
+
+    private void OnSortAscChanged(ChangeEventArgs e)
+    {
+        sortAsc = bool.Parse(e.Value?.ToString() ?? "true");
+        ResetPaging();
+    }
+
+    private void OnPageSizeChanged(ChangeEventArgs e)
+    {
+        pageSize = int.Parse(e.Value?.ToString() ?? "10");
+        ResetPaging();
+    }
+
+
+    private IEnumerable<Model> PagedItems()
+    {
+        var q = FilteredSortedItems();
+        var totalPages = TotalPages();
+        if (currentPage > totalPages) currentPage = totalPages;
+
+        var skip = (currentPage - 1) * pageSize;
+        return q.Skip(skip).Take(pageSize);
+    }
+
+    private int TotalPages()
+    {
+        var count = FilteredSortedItems().Count();
+        return Math.Max(1, (int)Math.Ceiling(count / (double)pageSize));
+    }
+
+    private void PrevPage()
+    {
+        if (currentPage > 1) currentPage--;
+    }
+
+    private void NextPage()
+    {
+        var tp = TotalPages();
+        if (currentPage < tp) currentPage++;
+    }
 
     private void OnClick_New()
     {
         _operation = "new";
         _model = new Model();
+        _model.SiparisTarihi = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        _model.Durum = "Beklemede";
     }
 
     private void OnClick_Edit(int? id)
@@ -131,8 +245,12 @@
 
     private async void OnClick_Add()
     {
+        if (_model.MusteriId <= 0)
+        {
+            await JS.InvokeVoidAsync("alert", "MüşteriId boş olamaz. Lütfen bir müşteri seçin / girin.");
+            return;
+        }
         _operation = "add";
-
         var jsonvalues = JsonSerializer.Serialize(_model);
 
         var results = await _myDbModel_Provider
@@ -141,17 +259,18 @@
                 ("jsonvalues", jsonvalues)
             );
 
-        var result = results.FirstOrDefault();
+        var result = results?.FirstOrDefault();
+        await JS.InvokeVoidAsync("alert",
+            result is null ? "İşlem sonucu gelmedi (SP kayıt döndürmedi)." : $"{result.Key} : {result.Value}");
 
-        await JS.InvokeVoidAsync("alert", $"{result.Key} : {result.Value}");
 
         await GetItems();
+        ResetPaging();
     }
 
     private async void OnClick_Update()
     {
         _operation = "update";
-
         var jsonvalues = JsonSerializer.Serialize(_model);
 
         var results = await _myDbModel_Provider
@@ -160,17 +279,19 @@
                 ("jsonvalues", jsonvalues)
             );
 
-        var result = results.FirstOrDefault();
+        var result = results?.FirstOrDefault();
+        await JS.InvokeVoidAsync("alert", result is null
+            ? "İşlem sonucu gelmedi (SP boş döndü)."
+            : $"{result.Key} : {result.Value}");
 
-        await JS.InvokeVoidAsync("alert", $"{result.Key} : {result.Value}");
 
         await GetItems();
+        ResetPaging();
     }
 
     private async void OnClick_Save()
     {
         _operation = "remove";
-
         var jsonvalues = JsonSerializer.Serialize(_model);
 
         var results = await _myDbModel_Provider
@@ -180,15 +301,16 @@
             );
 
         var result = results.FirstOrDefault();
-
         await JS.InvokeVoidAsync("alert", $"{result.Key} : {result.Value}");
 
         await GetItems();
+        ResetPaging();
     }
 
     private void OnClick_Cancel()
     {
         _operation = "list";
+        ResetPaging();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
