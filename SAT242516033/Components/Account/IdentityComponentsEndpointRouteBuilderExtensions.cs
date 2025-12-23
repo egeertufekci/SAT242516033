@@ -21,36 +21,48 @@ namespace Microsoft.AspNetCore.Routing
 
             var accountGroup = endpoints.MapGroup("/Account");
 
+            // LOGIN (External Provider -> Callback)
             accountGroup.MapPost("/PerformExternalLogin", (
                 HttpContext context,
                 [FromServices] SignInManager<ApplicationUser> signInManager,
                 [FromForm] string provider,
                 [FromForm] string returnUrl) =>
             {
-                IEnumerable<KeyValuePair<string, StringValues>> query = [
-                    new("ReturnUrl", returnUrl),
-                    new("Action", ExternalLogin.LoginCallbackAction)];
+                // Keep query for ReturnUrl + Action (login callback)
+                IEnumerable<KeyValuePair<string, StringValues>> query = new[]
+                {
+                    new KeyValuePair<string, StringValues>("ReturnUrl", returnUrl),
+                    new KeyValuePair<string, StringValues>("Action", ExternalLogin.LoginCallbackAction),
+                };
 
                 var redirectUrl = UriHelper.BuildRelative(
                     context.Request.PathBase,
                     "/Account/ExternalLogin",
-                    QueryString.Create(query));
+                    QueryString.Create(query)
+                );
 
                 var properties = signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl);
-                return TypedResults.Challenge(properties, [provider]);
+                return TypedResults.Challenge(properties, new[] { provider });
             });
 
             accountGroup.MapPost("/Logout", async (
-                ClaimsPrincipal user,
-                SignInManager<ApplicationUser> signInManager,
-                [FromForm] string returnUrl) =>
+            ClaimsPrincipal user,
+            SignInManager<ApplicationUser> signInManager,
+            [FromForm] string returnUrl) =>
             {
                 await signInManager.SignOutAsync();
-                return TypedResults.LocalRedirect($"~/{returnUrl}");
+
+                // returnUrl boþ/yanlýþ gelirse ana sayfaya dön
+                if (string.IsNullOrWhiteSpace(returnUrl) || !returnUrl.StartsWith("/"))
+                    returnUrl = "/";
+
+                return TypedResults.LocalRedirect($"~{returnUrl}");
             });
+
 
             var manageGroup = accountGroup.MapGroup("/Manage").RequireAuthorization();
 
+            // LINK (Logged-in user -> LinkExternalLogin -> ExternalLogins page callback)
             manageGroup.MapPost("/LinkExternalLogin", async (
                 HttpContext context,
                 [FromServices] SignInManager<ApplicationUser> signInManager,
@@ -59,13 +71,18 @@ namespace Microsoft.AspNetCore.Routing
                 // Clear the existing external cookie to ensure a clean login process
                 await context.SignOutAsync(IdentityConstants.ExternalScheme);
 
-                var redirectUrl = UriHelper.BuildRelative(
-                    context.Request.PathBase,
-                    "/Account/Manage/ExternalLogins",
-                    QueryString.Create("Action", ExternalLogins.LinkLoginCallbackAction));
+                var redirectUrl =
+                UriHelper.BuildRelative(context.Request.PathBase, "/Account/Manage/ExternalLogins")
+                + QueryString.Create("Action", "LinkLoginCallback");
 
-                var properties = signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl, signInManager.UserManager.GetUserId(context.User));
-                return TypedResults.Challenge(properties, [provider]);
+
+                var properties = signInManager.ConfigureExternalAuthenticationProperties(
+                    provider,
+                    redirectUrl,
+                    signInManager.UserManager.GetUserId(context.User)
+                );
+
+                return TypedResults.Challenge(properties, new[] { provider });
             });
 
             var loggerFactory = endpoints.ServiceProvider.GetRequiredService<ILoggerFactory>();
@@ -87,8 +104,9 @@ namespace Microsoft.AspNetCore.Routing
 
                 // Only include personal data for download
                 var personalData = new Dictionary<string, string>();
-                var personalDataProps = typeof(ApplicationUser).GetProperties().Where(
-                    prop => Attribute.IsDefined(prop, typeof(PersonalDataAttribute)));
+                var personalDataProps = typeof(ApplicationUser).GetProperties()
+                    .Where(prop => Attribute.IsDefined(prop, typeof(PersonalDataAttribute)));
+
                 foreach (var p in personalDataProps)
                 {
                     personalData.Add(p.Name, p.GetValue(user)?.ToString() ?? "null");

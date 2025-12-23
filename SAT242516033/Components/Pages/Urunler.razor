@@ -63,6 +63,45 @@
         }
     }
 
+    <div class="row g-2 align-items-end mb-3">
+        <div class="col-md-4">
+            <label class="form-label">Filtre (Ad / SKU)</label>
+            <input class="form-control" @bind="filterText" @bind:event="oninput" />
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Sırala</label>
+            <select class="form-select" @bind="sortBy">
+                <option value="UrunAdi">Ürün Adı</option>
+                <option value="SKU">SKU</option>
+                <option value="BirimFiyat">Birim Fiyat</option>
+                <option value="StokAdet">Stok</option>
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label">Yön</label>
+            <select class="form-select" @bind="sortAsc">
+                <option value="true">Artan</option>
+                <option value="false">Azalan</option>
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label">Sayfa Boyutu</label>
+            <select class="form-select" @bind="pageSize">
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="20">20</option>
+            </select>
+        </div>
+
+        <div class="col-md-1">
+            <button class="btn btn-outline-secondary w-100" @onclick="() => currentPage = 1">↺</button>
+        </div>
+    </div>
+
+
     @if (_operation == "new")
     {
         <input type="text" @bind="_model.UrunAdi" placeholder="UrunAdi" />
@@ -120,6 +159,15 @@
 @inject IJSRuntime JS
 
 @code {
+
+    // UI state
+    private string filterText = "";
+    private string sortBy = "UrunAdi";
+    private bool sortAsc = true;
+
+    private int pageSize = 10;
+    private int currentPage = 1;
+
 
     string _operation = "list";
     Model _model = new Model();
