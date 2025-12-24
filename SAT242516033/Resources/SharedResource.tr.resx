@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Home" xml:space="preserve"><value>Ana Sayfa</value></data>
+  <data name="Students" xml:space="preserve"><value>Öğrenciler</value></data>
+  <data name="Urunler" xml:space="preserve"><value>Ürünler</value></data>
+  <data name="Siparisler" xml:space="preserve"><value>Siparişler</value></data>
+  <data name="About" xml:space="preserve"><value>Hakkında</value></data>
+  <data name="New" xml:space="preserve"><value>Yeni</value></data>
+  <data name="Edit" xml:space="preserve"><value>Düzenle</value></data>
+  <data name="Delete" xml:space="preserve"><value>Sil</value></data>
+  <data name="Filter" xml:space="preserve"><value>Filtre</value></data>
+  <data name="Sort" xml:space="preserve"><value>Sırala</value></data>
+  <data name="Direction" xml:space="preserve"><value>Yön</value></data>
+  <data name="Asc" xml:space="preserve"><value>Artan</value></data>
+  <data name="Desc" xml:space="preserve"><value>Azalan</value></data>
+  <data name="PageSize" xml:space="preserve"><value>Sayfa Boyutu</value></data>
+</root>

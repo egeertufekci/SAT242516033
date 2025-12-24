@@ -9,6 +9,11 @@ using SAT242516033.Components;
 using SAT242516033.Components.Account;
 using SAT242516033.Data;
 using UnitOfWorks;
+using System.Globalization;
+using Microsoft.AspNetCore.Localization;
+using SAT242516033;
+
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -57,8 +62,22 @@ builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSe
 builder.Services.AddScoped<IMyDbModel_UnitOfWork, MyDbModel_UnitOfWork<MyDbModel_DbContext>>();
 builder.Services.AddScoped(typeof(IMyDbModel<>), typeof(MyDbModel<>));
 builder.Services.AddScoped<IMyDbModel_Provider, MyDbModel_Provider>();
+builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
+
 
 var app = builder.Build();
+
+
+
+// Configure localization: supported cultures and request localization middleware
+var supportedCultures = new[] { new CultureInfo("tr-TR"), new CultureInfo("en-US") };
+var requestLocalizationOptions = new RequestLocalizationOptions
+{
+    DefaultRequestCulture = new RequestCulture("tr-TR"),
+    SupportedCultures = supportedCultures.ToList(),
+    SupportedUICultures = supportedCultures.ToList()
+};
+app.UseRequestLocalization(requestLocalizationOptions);
 
 if (app.Environment.IsDevelopment())
 {

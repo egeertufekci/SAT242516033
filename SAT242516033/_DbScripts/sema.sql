@@ -1,0 +1,4 @@
+﻿SELECT TOP 20 *
+FROM dbo.Logs_Table
+ORDER BY LogId DESC;
+GO
