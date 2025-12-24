@@ -1,13 +1,13 @@
-﻿@page "/urunler"
+@page "/musteriler"
 @using MyDbModels
 @using Providers
 @using System.Linq
 @using System.Text.Json
 @using Microsoft.JSInterop
 
-<PageTitle>Ürünler</PageTitle>
+<PageTitle>Musteriler</PageTitle>
 
-<h3>Ürünler</h3>
+<h3>Musteriler</h3>
 
 @if (_myDbModel != null)
 {
@@ -23,11 +23,11 @@
                         </button>
                     </th>
 
-                    <th>UrunId</th>
-                    <th>UrunAdi</th>
-                    <th>SKU</th>
-                    <th>BirimFiyat</th>
-                    <th>StokAdet</th>
+                    <th>MusteriId</th>
+                    <th>Ad</th>
+                    <th>Soyad</th>
+                    <th>Email</th>
+                    <th>Telefon</th>
                 </tr>
             </thead>
             <tbody>
@@ -36,39 +36,32 @@
                     <tr>
                         <td>
                             <button class="btn btn-outline-warning"
-                                    @onclick="() => OnClick_Edit(item.UrunId)">
+                                    @onclick="() => OnClick_Edit(item.MusteriId)">
                                 Edit
                             </button>
                             <button class="btn btn-outline-danger"
-                                    @onclick="() => OnClick_Remove(item.UrunId)">
+                                    @onclick="() => OnClick_Remove(item.MusteriId)">
                                 Sil
                             </button>
                         </td>
 
-                        <td>@item.UrunId</td>
-                        <td>@item.UrunAdi</td>
-                        <td>@item.SKU</td>
-                        <td>@item.BirimFiyat</td>
-                        <td>@item.StokAdet</td>
+                        <td>@item.MusteriId</td>
+                        <td>@item.Ad</td>
+                        <td>@item.Soyad</td>
+                        <td>@item.Email</td>
+                        <td>@item.Telefon</td>
                     </tr>
                 }
             </tbody>
         </table>
-
-        @if (!string.IsNullOrWhiteSpace(_myDbModel.Message))
-        {
-            <div class="alert alert-warning mt-2">
-                @_myDbModel.Message
-            </div>
-        }
     }
 
     @if (_operation == "new")
     {
-        <input type="text" @bind="_model.UrunAdi" placeholder="UrunAdi" />
-        <input type="text" @bind="_model.SKU" placeholder="SKU" />
-        <input type="number" step="0.01" @bind="_model.BirimFiyat" placeholder="BirimFiyat" />
-        <input type="number" @bind="_model.StokAdet" placeholder="StokAdet" />
+        <input type="text" @bind="_model.Ad" placeholder="Ad" />
+        <input type="text" @bind="_model.Soyad" placeholder="Soyad" />
+        <input type="text" @bind="_model.Email" placeholder="Email" />
+        <input type="text" @bind="_model.Telefon" placeholder="Telefon" />
 
         <button class="btn btn-success"
                 @onclick="() => OnClick_Add()">
@@ -82,10 +75,10 @@
 
     @if (_operation == "edit")
     {
-        <input type="text" @bind="_model.UrunAdi" placeholder="UrunAdi" />
-        <input type="text" @bind="_model.SKU" placeholder="SKU" />
-        <input type="number" step="0.01" @bind="_model.BirimFiyat" placeholder="BirimFiyat" />
-        <input type="number" @bind="_model.StokAdet" placeholder="StokAdet" />
+        <input type="text" @bind="_model.Ad" placeholder="Ad" />
+        <input type="text" @bind="_model.Soyad" placeholder="Soyad" />
+        <input type="text" @bind="_model.Email" placeholder="Email" />
+        <input type="text" @bind="_model.Telefon" placeholder="Telefon" />
 
         <button class="btn btn-warning"
                 @onclick="() => OnClick_Update()">
@@ -99,10 +92,10 @@
 
     @if (_operation == "remove")
     {
-        <input type="text" @bind="_model.UrunAdi" readonly />
-        <input type="text" @bind="_model.SKU" readonly />
-        <input type="text" value="@_model.BirimFiyat" readonly />
-        <input type="text" value="@_model.StokAdet" readonly />
+        <input type="text" @bind="_model.Ad" readonly />
+        <input type="text" @bind="_model.Soyad" readonly />
+        <input type="text" @bind="_model.Email" readonly />
+        <input type="text" @bind="_model.Telefon" readonly />
 
         <button class="btn btn-danger"
                 @onclick="() => OnClick_Save()">
@@ -127,32 +120,30 @@
     private void OnClick_New()
     {
         _operation = "new";
-        _model = new Model(); // AktifMi default true zaten
+        _model = new Model();
     }
 
     private void OnClick_Edit(int? id)
     {
         _operation = "edit";
-        _model = _myDbModel.Items.FirstOrDefault(f => f.UrunId == id) ?? new Model();
+        _model = _myDbModel.Items.FirstOrDefault(f => f.MusteriId == id) ?? new Model();
     }
 
     private void OnClick_Remove(int? id)
     {
         _operation = "remove";
-        _model = _myDbModel.Items.FirstOrDefault(f => f.UrunId == id) ?? new Model();
+        _model = _myDbModel.Items.FirstOrDefault(f => f.MusteriId == id) ?? new Model();
     }
 
     private async void OnClick_Add()
     {
         _operation = "add";
 
-        // ✅ UI'da yok ama DB'de aktif olsun
-        _model.AktifMi = true;
-
         var jsonvalues = JsonSerializer.Serialize(_model);
 
         var results = await _myDbModel_Provider
-            .SetItems<MyDbModel_Result_KeyValue<string, bool>>("sp_Urun_Add_Update_Remove",
+            .SetItems<MyDbModel_Result_KeyValue<string, bool>>(
+                "sp_Musteri_Add_Update_Remove",
                 ("operation", _operation),
                 ("jsonvalues", jsonvalues)
             );
@@ -167,13 +158,11 @@
     {
         _operation = "update";
 
-        // ✅ güncellemede de aktif kalsın
-        _model.AktifMi = true;
-
         var jsonvalues = JsonSerializer.Serialize(_model);
 
         var results = await _myDbModel_Provider
-            .SetItems<MyDbModel_Result_KeyValue<string, bool>>("sp_Urun_Add_Update_Remove",
+            .SetItems<MyDbModel_Result_KeyValue<string, bool>>(
+                "sp_Musteri_Add_Update_Remove",
                 ("operation", _operation),
                 ("jsonvalues", jsonvalues)
             );
@@ -191,7 +180,8 @@
         var jsonvalues = JsonSerializer.Serialize(_model);
 
         var results = await _myDbModel_Provider
-            .SetItems<MyDbModel_Result_KeyValue<string, bool>>("sp_Urun_Add_Update_Remove",
+            .SetItems<MyDbModel_Result_KeyValue<string, bool>>(
+                "sp_Musteri_Add_Update_Remove",
                 ("operation", _operation),
                 ("jsonvalues", jsonvalues)
             );
@@ -218,17 +208,16 @@
     async Task GetItems()
     {
         _operation = "list";
-        await _myDbModel_Provider.Execute<Model>(_myDbModel, "sp_UrunListele");
+        await _myDbModel_Provider.Execute<Model>(_myDbModel, "sp_Musteriler");
         StateHasChanged();
     }
 
     class Model
     {
-        public int UrunId { get; set; }
-        public string UrunAdi { get; set; } = "";
-        public string SKU { get; set; } = "";
-        public decimal BirimFiyat { get; set; }
-        public int StokAdet { get; set; }
-        public bool AktifMi { get; set; } = true;
+        public int MusteriId { get; set; }
+        public string Ad { get; set; } = "";
+        public string Soyad { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Telefon { get; set; } = "";
     }
 }
