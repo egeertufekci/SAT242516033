@@ -1,0 +1,71 @@
+@page "/loglar"
+@using MyDbModels
+@using Providers
+@using System.Linq
+
+<PageTitle>Loglar</PageTitle>
+
+<h3>Loglar</h3>
+
+@if (_myDbModel != null)
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>LogId</th>
+                <th>LogLevel</th>
+                <th>LogMessage</th>
+                <th>Kaynak</th>
+                <th>LogTarihi</th>
+                <th>KullaniciId</th>
+                <th>HataKaydiId</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in _myDbModel.Items)
+            {
+                <tr>
+                    <td>@item.LogId</td>
+                    <td>@item.LogLevel</td>
+                    <td>@item.LogMessage</td>
+                    <td>@item.Kaynak</td>
+                    <td>@item.LogTarihi</td>
+                    <td>@item.KullaniciId</td>
+                    <td>@item.HataKaydiId</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @if (!string.IsNullOrWhiteSpace(_myDbModel.Message))
+    {
+        <div class="alert alert-warning mt-2">
+            @_myDbModel.Message
+        </div>
+    }
+}
+
+@inject IMyDbModel<Model> _myDbModel
+@inject IMyDbModel_Provider _myDbModel_Provider
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await _myDbModel_Provider.Execute<Model>(_myDbModel, "sp_Logs_List");
+            StateHasChanged();
+        }
+    }
+
+    class Model
+    {
+        public int LogId { get; set; }
+        public string LogLevel { get; set; } = string.Empty;
+        public string LogMessage { get; set; } = string.Empty;
+        public string? Kaynak { get; set; }
+        public string LogTarihi { get; set; } = string.Empty;
+        public int? KullaniciId { get; set; }
+        public int? HataKaydiId { get; set; }
+    }
+}

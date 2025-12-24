@@ -1,0 +1,209 @@
+@page "/hata-kayitlari"
+@using MyDbModels
+@using Providers
+@using System.Linq
+@using System.Text.Json
+@using Microsoft.JSInterop
+
+<PageTitle>Hata Kayıtları</PageTitle>
+
+<h3>Hata Kayıtları</h3>
+
+@if (_myDbModel != null)
+{
+    @if (_operation == "list")
+    {
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>
+                        <button class="btn btn-outline-success" @onclick="() => OnClick_New()">
+                            New
+                        </button>
+                    </th>
+                    <th>HataKaydiId</th>
+                    <th>UretimHattiId</th>
+                    <th>HataTipiId</th>
+                    <th>KullaniciId</th>
+                    <th>Durum</th>
+                    <th>BildirimTarihi</th>
+                    <th>Aciklama</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in _myDbModel.Items)
+                {
+                    <tr>
+                        <td>
+                            <button class="btn btn-outline-warning" @onclick="() => OnClick_Edit(item.HataKaydiId)">
+                                Edit
+                            </button>
+                            <button class="btn btn-outline-danger" @onclick="() => OnClick_Remove(item.HataKaydiId)">
+                                Sil
+                            </button>
+                        </td>
+                        <td>@item.HataKaydiId</td>
+                        <td>@item.UretimHattiId</td>
+                        <td>@item.HataTipiId</td>
+                        <td>@item.KullaniciId</td>
+                        <td>@item.Durum</td>
+                        <td>@item.BildirimTarihi</td>
+                        <td>@item.Aciklama</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        @if (!string.IsNullOrWhiteSpace(_myDbModel.Message))
+        {
+            <div class="alert alert-warning mt-2">
+                @_myDbModel.Message
+            </div>
+        }
+    }
+
+    @if (_operation == "new")
+    {
+        <input type="number" @bind="_model.UretimHattiId" placeholder="UretimHattiId" />
+        <input type="number" @bind="_model.HataTipiId" placeholder="HataTipiId" />
+        <input type="number" @bind="_model.KullaniciId" placeholder="KullaniciId" />
+        <input type="text" @bind="_model.Durum" placeholder="Durum" />
+        <input type="text" @bind="_model.BildirimTarihi" placeholder="BildirimTarihi (örn: 2025-12-24 10:30)" />
+        <input type="text" @bind="_model.Aciklama" placeholder="Aciklama" />
+
+        <button class="btn btn-success" @onclick="() => OnClick_Add()">Add</button>
+        <button class="btn btn-outline-dark" @onclick="() => OnClick_Cancel()">Cancel</button>
+    }
+
+    @if (_operation == "edit")
+    {
+        <input type="number" @bind="_model.UretimHattiId" placeholder="UretimHattiId" />
+        <input type="number" @bind="_model.HataTipiId" placeholder="HataTipiId" />
+        <input type="number" @bind="_model.KullaniciId" placeholder="KullaniciId" />
+        <input type="text" @bind="_model.Durum" placeholder="Durum" />
+        <input type="text" @bind="_model.BildirimTarihi" placeholder="BildirimTarihi" />
+        <input type="text" @bind="_model.Aciklama" placeholder="Aciklama" />
+
+        <button class="btn btn-warning" @onclick="() => OnClick_Update()">Update</button>
+        <button class="btn btn-outline-dark" @onclick="() => OnClick_Cancel()">Cancel</button>
+    }
+
+    @if (_operation == "remove")
+    {
+        <input type="number" @bind="_model.UretimHattiId" readonly />
+        <input type="number" @bind="_model.HataTipiId" readonly />
+        <input type="number" @bind="_model.KullaniciId" readonly />
+        <input type="text" @bind="_model.Durum" readonly />
+        <input type="text" @bind="_model.BildirimTarihi" readonly />
+        <input type="text" @bind="_model.Aciklama" readonly />
+
+        <button class="btn btn-danger" @onclick="() => OnClick_Save()">Remove</button>
+        <button class="btn btn-outline-dark" @onclick="() => OnClick_Cancel()">Cancel</button>
+    }
+}
+
+@inject IMyDbModel<Model> _myDbModel
+@inject IMyDbModel_Provider _myDbModel_Provider
+@inject IJSRuntime JS
+
+@code {
+    string _operation = "list";
+    Model _model = new Model();
+
+    private void OnClick_New()
+    {
+        _operation = "new";
+        _model = new Model();
+    }
+
+    private void OnClick_Edit(int? id)
+    {
+        _operation = "edit";
+        _model = _myDbModel.Items.FirstOrDefault(f => f.HataKaydiId == id) ?? new Model();
+    }
+
+    private void OnClick_Remove(int? id)
+    {
+        _operation = "remove";
+        _model = _myDbModel.Items.FirstOrDefault(f => f.HataKaydiId == id) ?? new Model();
+    }
+
+    private async void OnClick_Add()
+    {
+        _operation = "add";
+        var jsonvalues = JsonSerializer.Serialize(_model);
+
+        var results = await _myDbModel_Provider
+            .SetItems<MyDbModel_Result_KeyValue<string, bool>>("sp_HataKaydi_Add_Update_Remove",
+                ("operation", _operation),
+                ("jsonvalues", jsonvalues));
+
+        var result = results.FirstOrDefault();
+        await JS.InvokeVoidAsync("alert", $"{result.Key} : {result.Value}");
+
+        await GetItems();
+    }
+
+    private async void OnClick_Update()
+    {
+        _operation = "update";
+        var jsonvalues = JsonSerializer.Serialize(_model);
+
+        var results = await _myDbModel_Provider
+            .SetItems<MyDbModel_Result_KeyValue<string, bool>>("sp_HataKaydi_Add_Update_Remove",
+                ("operation", _operation),
+                ("jsonvalues", jsonvalues));
+
+        var result = results.FirstOrDefault();
+        await JS.InvokeVoidAsync("alert", $"{result.Key} : {result.Value}");
+
+        await GetItems();
+    }
+
+    private async void OnClick_Save()
+    {
+        _operation = "remove";
+        var jsonvalues = JsonSerializer.Serialize(_model);
+
+        var results = await _myDbModel_Provider
+            .SetItems<MyDbModel_Result_KeyValue<string, bool>>("sp_HataKaydi_Add_Update_Remove",
+                ("operation", _operation),
+                ("jsonvalues", jsonvalues));
+
+        var result = results.FirstOrDefault();
+        await JS.InvokeVoidAsync("alert", $"{result.Key} : {result.Value}");
+
+        await GetItems();
+    }
+
+    private void OnClick_Cancel()
+    {
+        _operation = "list";
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await GetItems();
+        }
+    }
+
+    async Task GetItems()
+    {
+        _operation = "list";
+        await _myDbModel_Provider.Execute<Model>(_myDbModel, "sp_HataKaydi_List");
+        StateHasChanged();
+    }
+
+    class Model
+    {
+        public int HataKaydiId { get; set; }
+        public int UretimHattiId { get; set; }
+        public int HataTipiId { get; set; }
+        public int? KullaniciId { get; set; }
+        public string Durum { get; set; } = "Açık";
+        public string BildirimTarihi { get; set; } = string.Empty;
+        public string? Aciklama { get; set; }
+    }
+}
