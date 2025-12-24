@@ -1,0 +1,75 @@
+﻿@page "/login"
+@using Microsoft.EntityFrameworkCore
+@using System.ComponentModel.DataAnnotations
+@using SAT242516033.Data
+@using UrunSiparisTakip.Models
+
+<PageTitle>Giriş</PageTitle>
+
+<h3>Giriş</h3>
+
+<EditForm Model="_loginModel" OnValidSubmit="HandleLogin">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label class="form-label">Kullanıcı Adı</label>
+        <InputText class="form-control" @bind-Value="_loginModel.KullaniciAdi" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Şifre</label>
+        <InputText class="form-control" @bind-Value="_loginModel.Sifre" type="password" />
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <div class="alert alert-danger">
+            @_errorMessage
+        </div>
+    }
+
+    <button class="btn btn-primary" type="submit" disabled="@_isBusy">Giriş Yap</button>
+</EditForm>
+
+@code {
+    private LoginModel _loginModel = new();
+    private string? _errorMessage;
+    private bool _isBusy;
+
+    [Inject] private ApplicationDbContext DbContext { get; set; } = default!;
+    [Inject] private SimpleAuthenticationStateProvider AuthProvider { get; set; } = default!;
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+
+    private async Task HandleLogin()
+    {
+        _isBusy = true;
+        _errorMessage = null;
+
+        var kullanici = await DbContext.Kullanicilar
+            .AsNoTracking()
+            .FirstOrDefaultAsync(k =>
+                k.KullaniciAdi == _loginModel.KullaniciAdi &&
+                k.Sifre == _loginModel.Sifre &&
+                k.AktifMi);
+
+        if (kullanici is null)
+        {
+            _errorMessage = "Kullanıcı adı veya şifre hatalı.";
+            _isBusy = false;
+            return;
+        }
+
+        await AuthProvider.SignInAsync(kullanici);
+        NavigationManager.NavigateTo("/");
+    }
+
+    private class LoginModel
+    {
+        [Required(ErrorMessage = "Kullanıcı adı zorunludur.")]
+        public string KullaniciAdi { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Şifre zorunludur.")]
+        public string Sifre { get; set; } = string.Empty;
+    }
+}

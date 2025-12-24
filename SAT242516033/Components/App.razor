@@ -11,18 +11,7 @@
     <HeadOutlet />
 </head>
 <body>
-    <Routes @rendermode="@RenderModeForPage" />
+    <Routes @rendermode="InteractiveServer" />
     <script src="_framework/blazor.web.js"></script>
 </body>
-@code {
-
-        [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
-
-        private IComponentRenderMode? RenderModeForPage =>
-                        HttpContext.Request.Path
-                                        .StartsWithSegments("/Account")
-                                        ? null
-                                        : InteractiveServer;
-
-}
 </html>

@@ -1,15 +1,13 @@
-﻿@page "/siparisler"
+﻿@page "/logs"
 @using MyDbModels
 @using Providers
+@using System.Linq
 @using System.Text.Json
+@using Microsoft.JSInterop
 
-@inject IMyDbModel<Model> _myDbModel
-@inject IMyDbModel_Provider _myDbModel_Provider
-@inject IJSRuntime JS
+<PageTitle>Logs</PageTitle>
 
-<PageTitle>Siparişler</PageTitle>
-
-<h3>Siparişler</h3>
+<h3>Logs</h3>
 
 @if (_myDbModel != null)
 {
@@ -25,11 +23,10 @@
                         </button>
                     </th>
 
-                    <th>SiparisId</th>
-                    <th>MusteriId</th>
-                    <th>SiparisTarihi</th>
-                    <th>Durum</th>
-
+                    <th>LogId</th>
+                    <th>LogLevel</th>
+                    <th>Message</th>
+                    <th>LoggedAt</th>
                 </tr>
             </thead>
             <tbody>
@@ -38,19 +35,19 @@
                     <tr>
                         <td>
                             <button class="btn btn-outline-warning"
-                                    @onclick="() => OnClick_Edit(item.SiparisId)">
+                                    @onclick="() => OnClick_Edit(item.LogId)">
                                 Edit
                             </button>
                             <button class="btn btn-outline-danger"
-                                    @onclick="() => OnClick_Remove(item.SiparisId)">
+                                    @onclick="() => OnClick_Remove(item.LogId)">
                                 Sil
                             </button>
                         </td>
 
-                        <td>@item.SiparisId</td>
-                        <td>@item.MusteriId</td>
-                        <td>@item.SiparisTarihi</td>
-                        <td>@item.Durum</td>
+                        <td>@item.LogId</td>
+                        <td>@item.LogLevel</td>
+                        <td>@item.Message</td>
+                        <td>@item.LoggedAt</td>
                     </tr>
                 }
             </tbody>
@@ -59,9 +56,9 @@
 
     @if (_operation == "new")
     {
-        <input type="number" @bind="_model.MusteriId" placeholder="MusteriId" />
-        <input type="text" @bind="_model.SiparisTarihi" placeholder="SiparisTarihi (örn: 2025-12-22 10:30)" />
-        <input type="text" @bind="_model.Durum" placeholder="Durum" />
+        <input type="text" @bind="_model.LogLevel" placeholder="LogLevel" />
+        <input type="text" @bind="_model.Message" placeholder="Message" />
+        <input type="text" @bind="_model.Exception" placeholder="Exception" />
 
         <button class="btn btn-success"
                 @onclick="() => OnClick_Add()">
@@ -75,9 +72,9 @@
 
     @if (_operation == "edit")
     {
-        <input type="number" @bind="_model.MusteriId" placeholder="MusteriId" />
-        <input type="text" @bind="_model.SiparisTarihi" placeholder="SiparisTarihi (örn: 2025-12-22 10:30)" />
-        <input type="text" @bind="_model.Durum" placeholder="Durum" />
+        <input type="text" @bind="_model.LogLevel" placeholder="LogLevel" />
+        <input type="text" @bind="_model.Message" placeholder="Message" />
+        <input type="text" @bind="_model.Exception" placeholder="Exception" />
 
         <button class="btn btn-warning"
                 @onclick="() => OnClick_Update()">
@@ -91,9 +88,8 @@
 
     @if (_operation == "remove")
     {
-        <input type="number" @bind="_model.MusteriId" readonly />
-        <input type="text" @bind="_model.SiparisTarihi" readonly />
-        <input type="text" @bind="_model.Durum" readonly />
+        <input type="text" @bind="_model.Message" readonly />
+        <input type="text" @bind="_model.Exception" readonly />
 
         <button class="btn btn-danger"
                 @onclick="() => OnClick_Save()">
@@ -106,27 +102,31 @@
     }
 }
 
+@inject IMyDbModel<Model> _myDbModel
+@inject IMyDbModel_Provider _myDbModel_Provider
+@inject IJSRuntime JS
+
 @code {
 
     string _operation = "list";
-    Model _model = new Model();
+    Model _model = new();
 
     private void OnClick_New()
     {
         _operation = "new";
-        _model = new Model();
+        _model = new Model { LoggedAt = DateTime.Now };
     }
 
     private void OnClick_Edit(int? id)
     {
         _operation = "edit";
-        _model = _myDbModel.Items.FirstOrDefault(f => f.SiparisId == id) ?? new Model();
+        _model = _myDbModel.Items.FirstOrDefault(f => f.LogId == id) ?? new Model();
     }
 
     private void OnClick_Remove(int? id)
     {
         _operation = "remove";
-        _model = _myDbModel.Items.FirstOrDefault(f => f.SiparisId == id) ?? new Model();
+        _model = _myDbModel.Items.FirstOrDefault(f => f.LogId == id) ?? new Model();
     }
 
     private async void OnClick_Add()
@@ -136,13 +136,13 @@
         var jsonvalues = JsonSerializer.Serialize(_model);
 
         var results = await _myDbModel_Provider
-            .SetItems<MyDbModel_Result_KeyValue<string, bool>>("sp_Siparis_Add_Update_Remove",
+            .SetItems<MyDbModel_Result_KeyValue<string, bool>>(
+                "sp_Logs_Add_Update_Remove",
                 ("operation", _operation),
                 ("jsonvalues", jsonvalues)
             );
 
         var result = results.FirstOrDefault();
-
         await JS.InvokeVoidAsync("alert", $"{result.Key} : {result.Value}");
 
         await GetItems();
@@ -155,13 +155,13 @@
         var jsonvalues = JsonSerializer.Serialize(_model);
 
         var results = await _myDbModel_Provider
-            .SetItems<MyDbModel_Result_KeyValue<string, bool>>("sp_Siparis_Add_Update_Remove",
+            .SetItems<MyDbModel_Result_KeyValue<string, bool>>(
+                "sp_Logs_Add_Update_Remove",
                 ("operation", _operation),
                 ("jsonvalues", jsonvalues)
             );
 
         var result = results.FirstOrDefault();
-
         await JS.InvokeVoidAsync("alert", $"{result.Key} : {result.Value}");
 
         await GetItems();
@@ -174,13 +174,13 @@
         var jsonvalues = JsonSerializer.Serialize(_model);
 
         var results = await _myDbModel_Provider
-            .SetItems<MyDbModel_Result_KeyValue<string, bool>>("sp_Siparis_Add_Update_Remove",
+            .SetItems<MyDbModel_Result_KeyValue<string, bool>>(
+                "sp_Logs_Add_Update_Remove",
                 ("operation", _operation),
                 ("jsonvalues", jsonvalues)
             );
 
         var result = results.FirstOrDefault();
-
         await JS.InvokeVoidAsync("alert", $"{result.Key} : {result.Value}");
 
         await GetItems();
@@ -202,15 +202,16 @@
     async Task GetItems()
     {
         _operation = "list";
-        await _myDbModel_Provider.Execute<Model>(_myDbModel, "sp_Siparisler");
+        await _myDbModel_Provider.Execute<Model>(_myDbModel, "sp_Logs");
         StateHasChanged();
     }
 
     class Model
     {
-        public int SiparisId { get; set; }
-        public int MusteriId { get; set; }
-        public string SiparisTarihi { get; set; } = "";
-        public string Durum { get; set; } = "";
+        public int LogId { get; set; }
+        public string LogLevel { get; set; } = "";
+        public string Message { get; set; } = "";
+        public string? Exception { get; set; }
+        public DateTime LoggedAt { get; set; }
     }
 }

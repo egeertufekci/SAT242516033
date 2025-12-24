@@ -1,6 +1,4 @@
-﻿@implements IDisposable
-@using Microsoft.AspNetCore.Components.Routing
-@inject NavigationManager NavigationManager
+﻿
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -18,75 +16,50 @@
     </div>
 
     <div class="nav-item px-3">
-        <NavLink class="nav-link" href="/urunler" Match="NavLinkMatch.Prefix">
-            <span class="bi bi-box-seam-nav-menu" aria-hidden="true"></span> Ürünler
+        <NavLink class="nav-link" href="/kullanicilar" Match="NavLinkMatch.Prefix">
+            <span class="bi bi-people-fill-nav-menu" aria-hidden="true"></span> Kullanıcılar
         </NavLink>
     </div>
 
     <div class="nav-item px-3">
-        <NavLink class="nav-link" href="/siparisler" Match="NavLinkMatch.Prefix">
-            <span class="bi bi-receipt-cutoff-nav-menu" aria-hidden="true"></span> Siparişler
+        <NavLink class="nav-link" href="/uretim-hatlari" Match="NavLinkMatch.Prefix">
+            <span class="bi bi-diagram-3-fill-nav-menu" aria-hidden="true"></span> Üretim Hatları
+        </NavLink>
+    </div>
+
+    <div class="nav-item px-3">
+        <NavLink class="nav-link" href="/hata-tipleri" Match="NavLinkMatch.Prefix">
+            <span class="bi bi-exclamation-triangle-fill-nav-menu" aria-hidden="true"></span> Hata Tipleri
+        </NavLink>
+    </div>
+
+    <div class="nav-item px-3">
+        <NavLink class="nav-link" href="/hata-kayitlari" Match="NavLinkMatch.Prefix">
+            <span class="bi bi-clipboard-data-fill-nav-menu" aria-hidden="true"></span> Hata Kayıtları
+        </NavLink>
+    </div>
+
+    <div class="nav-item px-3">
+        <NavLink class="nav-link" href="/logs" Match="NavLinkMatch.Prefix">
+            <span class="bi bi-journal-text-nav-menu" aria-hidden="true"></span> Logs
         </NavLink>
     </div>
 
     <AuthorizeView Context="authContext">
         <Authorized>
             <div class="nav-item px-3">
-                <NavLink class="nav-link" href="/Account/Manage" Match="NavLinkMatch.Prefix">
-                    <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> @authContext.User.Identity?.Name
+                <NavLink class="nav-link" href="/logout" Match="NavLinkMatch.Prefix">
+                    <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> Çıkış
                 </NavLink>
-            </div>
-
-            <div class="nav-item px-3">
-                <form action="/Account/Logout" method="post">
-                    <AntiforgeryToken />
-                    <input type="hidden" name="ReturnUrl" value="@currentUrl" />
-                    <button type="submit" class="nav-link btn btn-link p-0">
-                        <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> Logout
-                    </button>
-                </form>
             </div>
         </Authorized>
 
         <NotAuthorized>
             <div class="nav-item px-3">
-                <NavLink class="nav-link" href="/Account/Login" Match="NavLinkMatch.Prefix">
+                <NavLink class="nav-link" href="/login" Match="NavLinkMatch.Prefix">
                     <span class="bi bi-box-arrow-in-right-nav-menu" aria-hidden="true"></span> Login
-                </NavLink>
-            </div>
-
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="/Account/Register" Match="NavLinkMatch.Prefix">
-                    <span class="bi bi-person-nav-menu" aria-hidden="true"></span> Register
                 </NavLink>
             </div>
         </NotAuthorized>
     </AuthorizeView>
 </nav>
-
-@code {
-    private string? currentUrl;
-
-    protected override void OnInitialized()
-    {
-        UpdateCurrentUrl();
-        NavigationManager.LocationChanged += OnLocationChanged;
-    }
-
-    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
-    {
-        UpdateCurrentUrl();
-        StateHasChanged();
-    }
-
-    private void UpdateCurrentUrl()
-    {
-        var rel = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
-        currentUrl = string.IsNullOrWhiteSpace(rel) ? "/" : "/" + rel;
-    }
-
-    public void Dispose()
-    {
-        NavigationManager.LocationChanged -= OnLocationChanged;
-    }
-}

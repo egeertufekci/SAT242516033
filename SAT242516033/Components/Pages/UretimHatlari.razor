@@ -1,13 +1,13 @@
-@page "/musteriler"
+﻿@page "/uretim-hatlari"
 @using MyDbModels
 @using Providers
 @using System.Linq
 @using System.Text.Json
 @using Microsoft.JSInterop
 
-<PageTitle>Musteriler</PageTitle>
+<PageTitle>Üretim Hatları</PageTitle>
 
-<h3>Musteriler</h3>
+<h3>Üretim Hatları</h3>
 
 @if (_myDbModel != null)
 {
@@ -23,11 +23,10 @@
                         </button>
                     </th>
 
-                    <th>MusteriId</th>
-                    <th>Ad</th>
-                    <th>Soyad</th>
-                    <th>Email</th>
-                    <th>Telefon</th>
+                    <th>UretimHattiId</th>
+                    <th>HatAdi</th>
+                    <th>Aciklama</th>
+                    <th>AktifMi</th>
                 </tr>
             </thead>
             <tbody>
@@ -36,20 +35,19 @@
                     <tr>
                         <td>
                             <button class="btn btn-outline-warning"
-                                    @onclick="() => OnClick_Edit(item.MusteriId)">
+                                    @onclick="() => OnClick_Edit(item.UretimHattiId)">
                                 Edit
                             </button>
                             <button class="btn btn-outline-danger"
-                                    @onclick="() => OnClick_Remove(item.MusteriId)">
+                                    @onclick="() => OnClick_Remove(item.UretimHattiId)">
                                 Sil
                             </button>
                         </td>
 
-                        <td>@item.MusteriId</td>
-                        <td>@item.Ad</td>
-                        <td>@item.Soyad</td>
-                        <td>@item.Email</td>
-                        <td>@item.Telefon</td>
+                        <td>@item.UretimHattiId</td>
+                        <td>@item.HatAdi</td>
+                        <td>@item.Aciklama</td>
+                        <td>@item.AktifMi</td>
                     </tr>
                 }
             </tbody>
@@ -58,10 +56,8 @@
 
     @if (_operation == "new")
     {
-        <input type="text" @bind="_model.Ad" placeholder="Ad" />
-        <input type="text" @bind="_model.Soyad" placeholder="Soyad" />
-        <input type="text" @bind="_model.Email" placeholder="Email" />
-        <input type="text" @bind="_model.Telefon" placeholder="Telefon" />
+        <input type="text" @bind="_model.HatAdi" placeholder="HatAdi" />
+        <input type="text" @bind="_model.Aciklama" placeholder="Aciklama" />
 
         <button class="btn btn-success"
                 @onclick="() => OnClick_Add()">
@@ -75,10 +71,8 @@
 
     @if (_operation == "edit")
     {
-        <input type="text" @bind="_model.Ad" placeholder="Ad" />
-        <input type="text" @bind="_model.Soyad" placeholder="Soyad" />
-        <input type="text" @bind="_model.Email" placeholder="Email" />
-        <input type="text" @bind="_model.Telefon" placeholder="Telefon" />
+        <input type="text" @bind="_model.HatAdi" placeholder="HatAdi" />
+        <input type="text" @bind="_model.Aciklama" placeholder="Aciklama" />
 
         <button class="btn btn-warning"
                 @onclick="() => OnClick_Update()">
@@ -92,10 +86,8 @@
 
     @if (_operation == "remove")
     {
-        <input type="text" @bind="_model.Ad" readonly />
-        <input type="text" @bind="_model.Soyad" readonly />
-        <input type="text" @bind="_model.Email" readonly />
-        <input type="text" @bind="_model.Telefon" readonly />
+        <input type="text" @bind="_model.HatAdi" readonly />
+        <input type="text" @bind="_model.Aciklama" readonly />
 
         <button class="btn btn-danger"
                 @onclick="() => OnClick_Save()">
@@ -115,24 +107,24 @@
 @code {
 
     string _operation = "list";
-    Model _model = new Model();
+    Model _model = new();
 
     private void OnClick_New()
     {
         _operation = "new";
-        _model = new Model();
+        _model = new Model { AktifMi = true };
     }
 
     private void OnClick_Edit(int? id)
     {
         _operation = "edit";
-        _model = _myDbModel.Items.FirstOrDefault(f => f.MusteriId == id) ?? new Model();
+        _model = _myDbModel.Items.FirstOrDefault(f => f.UretimHattiId == id) ?? new Model();
     }
 
     private void OnClick_Remove(int? id)
     {
         _operation = "remove";
-        _model = _myDbModel.Items.FirstOrDefault(f => f.MusteriId == id) ?? new Model();
+        _model = _myDbModel.Items.FirstOrDefault(f => f.UretimHattiId == id) ?? new Model();
     }
 
     private async void OnClick_Add()
@@ -143,7 +135,7 @@
 
         var results = await _myDbModel_Provider
             .SetItems<MyDbModel_Result_KeyValue<string, bool>>(
-                "sp_Musteri_Add_Update_Remove",
+                "sp_UretimHatti_Add_Update_Remove",
                 ("operation", _operation),
                 ("jsonvalues", jsonvalues)
             );
@@ -162,7 +154,7 @@
 
         var results = await _myDbModel_Provider
             .SetItems<MyDbModel_Result_KeyValue<string, bool>>(
-                "sp_Musteri_Add_Update_Remove",
+                "sp_UretimHatti_Add_Update_Remove",
                 ("operation", _operation),
                 ("jsonvalues", jsonvalues)
             );
@@ -181,7 +173,7 @@
 
         var results = await _myDbModel_Provider
             .SetItems<MyDbModel_Result_KeyValue<string, bool>>(
-                "sp_Musteri_Add_Update_Remove",
+                "sp_UretimHatti_Add_Update_Remove",
                 ("operation", _operation),
                 ("jsonvalues", jsonvalues)
             );
@@ -208,16 +200,15 @@
     async Task GetItems()
     {
         _operation = "list";
-        await _myDbModel_Provider.Execute<Model>(_myDbModel, "sp_Musteriler");
+        await _myDbModel_Provider.Execute<Model>(_myDbModel, "sp_UretimHatlari");
         StateHasChanged();
     }
 
     class Model
     {
-        public int MusteriId { get; set; }
-        public string Ad { get; set; } = "";
-        public string Soyad { get; set; } = "";
-        public string Email { get; set; } = "";
-        public string Telefon { get; set; } = "";
+        public int UretimHattiId { get; set; }
+        public string HatAdi { get; set; } = "";
+        public string? Aciklama { get; set; }
+        public bool AktifMi { get; set; }
     }
 }

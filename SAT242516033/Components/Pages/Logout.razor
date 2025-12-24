@@ -1,0 +1,17 @@
+﻿@page "/logout"
+@using SAT242516033.Data
+
+<PageTitle>Çıkış</PageTitle>
+
+<h3>Çıkış yapılıyor...</h3>
+
+@code {
+    [Inject] private SimpleAuthenticationStateProvider AuthProvider { get; set; } = default!;
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthProvider.SignOutAsync();
+        NavigationManager.NavigateTo("/login", true);
+    }
+}
