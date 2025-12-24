@@ -14,6 +14,7 @@ namespace SAT242516033.Data
         public DbSet<Siparis> Siparisler { get; set; } = null!;
         public DbSet<SiparisDetayi> SiparisDetaylari { get; set; } = null!;
         public DbSet<UrunKategori> UrunKategorileri { get; set; } = null!;
+        public DbSet<LogsTable> LogsTable { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -24,6 +25,24 @@ namespace SAT242516033.Data
 
             builder.Entity<UrunKategori>().ToTable("UrunKategorileri");
             builder.Entity<UrunKategori>().HasKey(uk => new { uk.UrunId, uk.KategoriId });
+
+            builder.Entity<UrunKategori>()
+                .HasOne(uk => uk.Urun)
+                .WithMany(u => u.UrunKategorileri)
+                .HasForeignKey(uk => uk.UrunId);
+
+            builder.Entity<UrunKategori>()
+                .HasOne(uk => uk.Kategori)
+                .WithMany(k => k.UrunKategorileri)
+                .HasForeignKey(uk => uk.KategoriId);
+
+            builder.Entity<Siparis>()
+                .Property(s => s.Durum)
+                .HasMaxLength(30);
+
+            builder.Entity<LogsTable>()
+                .ToTable("Logs_Table")
+                .HasKey(l => l.LogId);
         }
     }
 }

@@ -1,0 +1,219 @@
+@page "/kategoriler"
+@using UrunSiparisTakip.Models
+@inject SAT242516033.Services.KategoriService KategoriService
+@inject SAT242516033.Services.UrunService UrunService
+
+<PageTitle>Kategoriler</PageTitle>
+
+<h3>Kategori Yönetimi</h3>
+
+@if (_isLoading)
+{
+    <p>Yükleniyor...</p>
+}
+else
+{
+    <div class="row">
+        <div class="col-lg-7">
+            <h5>Kategori Listesi</h5>
+            @if (_mode == "list")
+            {
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>
+                                <button class="btn btn-outline-success" @onclick="OnClickNew">Yeni</button>
+                            </th>
+                            <th>KategoriId</th>
+                            <th>Kategori Adı</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in _kategoriler)
+                        {
+                            <tr>
+                                <td>
+                                    <button class="btn btn-outline-warning" @onclick="() => OnClickEdit(item)">Düzenle</button>
+                                    <button class="btn btn-outline-danger" @onclick="() => OnClickRemove(item)">Sil</button>
+                                </td>
+                                <td>@item.KategoriId</td>
+                                <td>@item.KategoriAdi</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+
+            @if (_mode == "new" || _mode == "edit")
+            {
+                <EditForm Model="_model" OnValidSubmit="OnSubmitAsync">
+                    <DataAnnotationsValidator />
+                    <div class="mb-2">
+                        <label class="form-label">Kategori Adı</label>
+                        <InputText class="form-control" @bind-Value="_model.KategoriAdi" />
+                    </div>
+                    <ValidationSummary />
+                    <button class="btn btn-success" type="submit">Kaydet</button>
+                    <button class="btn btn-outline-dark" type="button" @onclick="OnClickCancel">İptal</button>
+                </EditForm>
+            }
+
+            @if (_mode == "remove")
+            {
+                <div class="alert alert-warning">
+                    <p>@_model.KategoriAdi kategorisini silmek istediğinize emin misiniz?</p>
+                    <button class="btn btn-danger" @onclick="OnConfirmDeleteAsync">Sil</button>
+                    <button class="btn btn-outline-dark" @onclick="OnClickCancel">İptal</button>
+                </div>
+            }
+        </div>
+
+        <div class="col-lg-5">
+            <h5>Ürün-Kategori İlişkilendirme</h5>
+            <div class="mb-2">
+                <label class="form-label">Kategori Seç</label>
+                <select class="form-select" @onchange="OnRelationCategoryChanged">
+                    <option value="">Seçiniz</option>
+                    @foreach (var kategori in _kategoriler)
+                    {
+                        <option value="@kategori.KategoriId">@kategori.KategoriAdi</option>
+                    }
+                </select>
+            </div>
+
+            @if (_selectedKategoriId.HasValue)
+            {
+                <div class="border rounded p-2 mb-2" style="max-height: 300px; overflow-y: auto;">
+                    @foreach (var urun in _urunler)
+                    {
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox"
+                                   checked="@_selectedUrunIds.Contains(urun.UrunId)"
+                                   @onchange="(args) => OnToggleUrun(urun.UrunId, args)" />
+                            <label class="form-check-label">@urun.UrunAdi (@urun.SKU)</label>
+                        </div>
+                    }
+                </div>
+
+                <button class="btn btn-primary" @onclick="OnSaveRelationsAsync">İlişkileri Kaydet</button>
+            }
+            else
+            {
+                <p class="text-muted">İlişkilendirme için kategori seçiniz.</p>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private bool _isLoading = true;
+    private string _mode = "list";
+    private Kategori _model = new();
+    private List<Kategori> _kategoriler = new();
+    private List<Urun> _urunler = new();
+    private int? _selectedKategoriId;
+    private HashSet<int> _selectedUrunIds = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _isLoading = true;
+        _kategoriler = await KategoriService.GetAllAsync(includeProducts: true);
+        _urunler = await UrunService.GetAllAsync();
+        _isLoading = false;
+    }
+
+    private void OnClickNew()
+    {
+        _mode = "new";
+        _model = new Kategori();
+    }
+
+    private void OnClickEdit(Kategori kategori)
+    {
+        _mode = "edit";
+        _model = new Kategori
+        {
+            KategoriId = kategori.KategoriId,
+            KategoriAdi = kategori.KategoriAdi
+        };
+    }
+
+    private void OnClickRemove(Kategori kategori)
+    {
+        _mode = "remove";
+        _model = kategori;
+    }
+
+    private async Task OnSubmitAsync()
+    {
+        if (_mode == "new")
+        {
+            await KategoriService.CreateAsync(_model);
+        }
+        else if (_mode == "edit")
+        {
+            await KategoriService.UpdateAsync(_model);
+        }
+
+        _mode = "list";
+        await LoadAsync();
+    }
+
+    private async Task OnConfirmDeleteAsync()
+    {
+        await KategoriService.DeleteAsync(_model.KategoriId);
+        _mode = "list";
+        await LoadAsync();
+    }
+
+    private void OnClickCancel()
+    {
+        _mode = "list";
+    }
+
+    private async Task OnRelationCategoryChanged(ChangeEventArgs args)
+    {
+        if (int.TryParse(args.Value?.ToString(), out var kategoriId))
+        {
+            _selectedKategoriId = kategoriId;
+            var kategori = _kategoriler.FirstOrDefault(k => k.KategoriId == kategoriId);
+            _selectedUrunIds = kategori?.UrunKategorileri.Select(uk => uk.UrunId).ToHashSet() ?? new HashSet<int>();
+        }
+        else
+        {
+            _selectedKategoriId = null;
+            _selectedUrunIds = new HashSet<int>();
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void OnToggleUrun(int urunId, ChangeEventArgs args)
+    {
+        var isChecked = args.Value is bool value && value;
+        if (isChecked)
+        {
+            _selectedUrunIds.Add(urunId);
+        }
+        else
+        {
+            _selectedUrunIds.Remove(urunId);
+        }
+    }
+
+    private async Task OnSaveRelationsAsync()
+    {
+        if (!_selectedKategoriId.HasValue)
+        {
+            return;
+        }
+
+        await KategoriService.UpdateUrunRelationsAsync(_selectedKategoriId.Value, _selectedUrunIds);
+        await LoadAsync();
+    }
+}

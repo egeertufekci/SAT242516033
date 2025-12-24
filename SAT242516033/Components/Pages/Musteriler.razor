@@ -1,223 +1,147 @@
 @page "/musteriler"
-@using MyDbModels
-@using Providers
-@using System.Linq
-@using System.Text.Json
-@using Microsoft.JSInterop
+@using UrunSiparisTakip.Models
+@inject SAT242516033.Services.MusteriService MusteriService
 
 <PageTitle>Musteriler</PageTitle>
 
 <h3>Musteriler</h3>
 
-@if (_myDbModel != null)
+@if (_isLoading)
 {
-    @if (_operation == "list")
+    <p>Yükleniyor...</p>
+}
+else
+{
+    @if (_mode == "list")
     {
         <table class="table table-striped">
             <thead>
                 <tr>
                     <th>
-                        <button class="btn btn-outline-success"
-                                @onclick="() => OnClick_New()">
-                            New
-                        </button>
+                        <button class="btn btn-outline-success" @onclick="OnClickNew">Yeni</button>
                     </th>
-
                     <th>MusteriId</th>
                     <th>Ad</th>
                     <th>Soyad</th>
                     <th>Email</th>
-                    <th>Telefon</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var item in _myDbModel.Items)
+                @foreach (var item in _musteriler)
                 {
                     <tr>
                         <td>
-                            <button class="btn btn-outline-warning"
-                                    @onclick="() => OnClick_Edit(item.MusteriId)">
-                                Edit
-                            </button>
-                            <button class="btn btn-outline-danger"
-                                    @onclick="() => OnClick_Remove(item.MusteriId)">
-                                Sil
-                            </button>
+                            <button class="btn btn-outline-warning" @onclick="() => OnClickEdit(item)">Düzenle</button>
+                            <button class="btn btn-outline-danger" @onclick="() => OnClickRemove(item)">Sil</button>
                         </td>
-
                         <td>@item.MusteriId</td>
                         <td>@item.Ad</td>
                         <td>@item.Soyad</td>
                         <td>@item.Email</td>
-                        <td>@item.Telefon</td>
                     </tr>
                 }
             </tbody>
         </table>
     }
 
-    @if (_operation == "new")
+    @if (_mode == "new" || _mode == "edit")
     {
-        <input type="text" @bind="_model.Ad" placeholder="Ad" />
-        <input type="text" @bind="_model.Soyad" placeholder="Soyad" />
-        <input type="text" @bind="_model.Email" placeholder="Email" />
-        <input type="text" @bind="_model.Telefon" placeholder="Telefon" />
-
-        <button class="btn btn-success"
-                @onclick="() => OnClick_Add()">
-            Add
-        </button>
-        <button class="btn btn-outline-dark"
-                @onclick="() => OnClick_Cancel()">
-            Cancel
-        </button>
+        <EditForm Model="_model" OnValidSubmit="OnSubmitAsync">
+            <DataAnnotationsValidator />
+            <div class="mb-2">
+                <label class="form-label">Ad</label>
+                <InputText class="form-control" @bind-Value="_model.Ad" />
+            </div>
+            <div class="mb-2">
+                <label class="form-label">Soyad</label>
+                <InputText class="form-control" @bind-Value="_model.Soyad" />
+            </div>
+            <div class="mb-2">
+                <label class="form-label">Email</label>
+                <InputText class="form-control" @bind-Value="_model.Email" />
+            </div>
+            <ValidationSummary />
+            <button class="btn btn-success" type="submit">Kaydet</button>
+            <button class="btn btn-outline-dark" type="button" @onclick="OnClickCancel">İptal</button>
+        </EditForm>
     }
 
-    @if (_operation == "edit")
+    @if (_mode == "remove")
     {
-        <input type="text" @bind="_model.Ad" placeholder="Ad" />
-        <input type="text" @bind="_model.Soyad" placeholder="Soyad" />
-        <input type="text" @bind="_model.Email" placeholder="Email" />
-        <input type="text" @bind="_model.Telefon" placeholder="Telefon" />
-
-        <button class="btn btn-warning"
-                @onclick="() => OnClick_Update()">
-            Update
-        </button>
-        <button class="btn btn-outline-dark"
-                @onclick="() => OnClick_Cancel()">
-            Cancel
-        </button>
-    }
-
-    @if (_operation == "remove")
-    {
-        <input type="text" @bind="_model.Ad" readonly />
-        <input type="text" @bind="_model.Soyad" readonly />
-        <input type="text" @bind="_model.Email" readonly />
-        <input type="text" @bind="_model.Telefon" readonly />
-
-        <button class="btn btn-danger"
-                @onclick="() => OnClick_Save()">
-            Remove
-        </button>
-        <button class="btn btn-outline-dark"
-                @onclick="() => OnClick_Cancel()">
-            Cancel
-        </button>
+        <div class="alert alert-warning">
+            <p>@_model.Ad @_model.Soyad müşterisini silmek istediğinize emin misiniz?</p>
+            <button class="btn btn-danger" @onclick="OnConfirmDeleteAsync">Sil</button>
+            <button class="btn btn-outline-dark" @onclick="OnClickCancel">İptal</button>
+        </div>
     }
 }
 
-@inject IMyDbModel<Model> _myDbModel
-@inject IMyDbModel_Provider _myDbModel_Provider
-@inject IJSRuntime JS
-
 @code {
+    private bool _isLoading = true;
+    private string _mode = "list";
+    private Musteri _model = new();
+    private List<Musteri> _musteriler = new();
 
-    string _operation = "list";
-    Model _model = new Model();
-
-    private void OnClick_New()
+    protected override async Task OnInitializedAsync()
     {
-        _operation = "new";
-        _model = new Model();
+        await LoadAsync();
     }
 
-    private void OnClick_Edit(int? id)
+    private async Task LoadAsync()
     {
-        _operation = "edit";
-        _model = _myDbModel.Items.FirstOrDefault(f => f.MusteriId == id) ?? new Model();
+        _isLoading = true;
+        _musteriler = await MusteriService.GetAllAsync();
+        _isLoading = false;
     }
 
-    private void OnClick_Remove(int? id)
+    private void OnClickNew()
     {
-        _operation = "remove";
-        _model = _myDbModel.Items.FirstOrDefault(f => f.MusteriId == id) ?? new Model();
+        _mode = "new";
+        _model = new Musteri();
     }
 
-    private async void OnClick_Add()
+    private void OnClickEdit(Musteri musteri)
     {
-        _operation = "add";
-
-        var jsonvalues = JsonSerializer.Serialize(_model);
-
-        var results = await _myDbModel_Provider
-            .SetItems<MyDbModel_Result_KeyValue<string, bool>>(
-                "sp_Musteri_Add_Update_Remove",
-                ("operation", _operation),
-                ("jsonvalues", jsonvalues)
-            );
-
-        var result = results.FirstOrDefault();
-        await JS.InvokeVoidAsync("alert", $"{result.Key} : {result.Value}");
-
-        await GetItems();
-    }
-
-    private async void OnClick_Update()
-    {
-        _operation = "update";
-
-        var jsonvalues = JsonSerializer.Serialize(_model);
-
-        var results = await _myDbModel_Provider
-            .SetItems<MyDbModel_Result_KeyValue<string, bool>>(
-                "sp_Musteri_Add_Update_Remove",
-                ("operation", _operation),
-                ("jsonvalues", jsonvalues)
-            );
-
-        var result = results.FirstOrDefault();
-        await JS.InvokeVoidAsync("alert", $"{result.Key} : {result.Value}");
-
-        await GetItems();
-    }
-
-    private async void OnClick_Save()
-    {
-        _operation = "remove";
-
-        var jsonvalues = JsonSerializer.Serialize(_model);
-
-        var results = await _myDbModel_Provider
-            .SetItems<MyDbModel_Result_KeyValue<string, bool>>(
-                "sp_Musteri_Add_Update_Remove",
-                ("operation", _operation),
-                ("jsonvalues", jsonvalues)
-            );
-
-        var result = results.FirstOrDefault();
-        await JS.InvokeVoidAsync("alert", $"{result.Key} : {result.Value}");
-
-        await GetItems();
-    }
-
-    private void OnClick_Cancel()
-    {
-        _operation = "list";
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
+        _mode = "edit";
+        _model = new Musteri
         {
-            await GetItems();
+            MusteriId = musteri.MusteriId,
+            Ad = musteri.Ad,
+            Soyad = musteri.Soyad,
+            Email = musteri.Email
+        };
+    }
+
+    private void OnClickRemove(Musteri musteri)
+    {
+        _mode = "remove";
+        _model = musteri;
+    }
+
+    private async Task OnSubmitAsync()
+    {
+        if (_mode == "new")
+        {
+            await MusteriService.CreateAsync(_model);
         }
+        else if (_mode == "edit")
+        {
+            await MusteriService.UpdateAsync(_model);
+        }
+
+        _mode = "list";
+        await LoadAsync();
     }
 
-    async Task GetItems()
+    private async Task OnConfirmDeleteAsync()
     {
-        _operation = "list";
-        await _myDbModel_Provider.Execute<Model>(_myDbModel, "sp_Musteriler");
-        StateHasChanged();
+        await MusteriService.DeleteAsync(_model.MusteriId);
+        _mode = "list";
+        await LoadAsync();
     }
 
-    class Model
+    private void OnClickCancel()
     {
-        public int MusteriId { get; set; }
-        public string Ad { get; set; } = "";
-        public string Soyad { get; set; } = "";
-        public string Email { get; set; } = "";
-        public string Telefon { get; set; } = "";
+        _mode = "list";
     }
 }

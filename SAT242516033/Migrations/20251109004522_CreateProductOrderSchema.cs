@@ -64,7 +64,7 @@ namespace SAT242516033.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     MusteriId = table.Column<int>(type: "int", nullable: false),
                     SiparisTarihi = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Durum = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false)
+                    Durum = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -129,6 +129,21 @@ namespace SAT242516033.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "Logs_Table",
+                columns: table => new
+                {
+                    LogId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    LogLevel = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Message = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Logs_Table", x => x.LogId);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_SiparisDetaylari_SiparisId",
                 table: "SiparisDetaylari",
@@ -153,6 +168,9 @@ namespace SAT242516033.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "Logs_Table");
+
             migrationBuilder.DropTable(
                 name: "SiparisDetaylari");
 

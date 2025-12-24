@@ -1,14 +1,11 @@
-using DbContexts;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
-using MyDbModels;
-using Providers;
 using SAT242516033.Components;
 using SAT242516033.Components.Account;
 using SAT242516033.Data;
-using UnitOfWorks;
+using SAT242516033.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,8 +30,6 @@ var appDbConnection = builder.Configuration.GetConnectionString("Default") ?? de
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(defaultConnection));
-builder.Services.AddDbContext<MyDbModel_DbContext>(options =>
-    options.UseSqlServer(defaultConnection));
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -54,9 +49,11 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 .AddDefaultTokenProviders();
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
-builder.Services.AddScoped<IMyDbModel_UnitOfWork, MyDbModel_UnitOfWork<MyDbModel_DbContext>>();
-builder.Services.AddScoped(typeof(IMyDbModel<>), typeof(MyDbModel<>));
-builder.Services.AddScoped<IMyDbModel_Provider, MyDbModel_Provider>();
+builder.Services.AddScoped<ILogService, LogService>();
+builder.Services.AddScoped<MusteriService>();
+builder.Services.AddScoped<UrunService>();
+builder.Services.AddScoped<KategoriService>();
+builder.Services.AddScoped<SiparisService>();
 
 var app = builder.Build();
 

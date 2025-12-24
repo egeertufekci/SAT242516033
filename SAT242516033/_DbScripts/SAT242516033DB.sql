@@ -17,6 +17,7 @@ IF OBJECT_ID('dbo.vw_SiparisDetay','V') IS NOT NULL DROP VIEW dbo.vw_SiparisDeta
 IF OBJECT_ID('dbo.vw_SiparisOzet','V') IS NOT NULL DROP VIEW dbo.vw_SiparisOzet;
 GO
 IF OBJECT_ID('dbo.SiparisDetaylari','U') IS NOT NULL DROP TABLE dbo.SiparisDetaylari;
+IF OBJECT_ID('dbo.Logs_Table','U') IS NOT NULL DROP TABLE dbo.Logs_Table;
 IF OBJECT_ID('dbo.UrunKategorileri','U') IS NOT NULL DROP TABLE dbo.UrunKategorileri;
 IF OBJECT_ID('dbo.Siparisler','U') IS NOT NULL DROP TABLE dbo.Siparisler;
 IF OBJECT_ID('dbo.Urunler','U') IS NOT NULL DROP TABLE dbo.Urunler;
@@ -86,6 +87,14 @@ CREATE TABLE dbo.SiparisDetaylari
     Miktar INT NOT NULL CHECK (Miktar > 0),
     BirimFiyat DECIMAL(10,2) NOT NULL CHECK (BirimFiyat >= 0)
 );
+
+CREATE TABLE dbo.Logs_Table
+(
+    LogId INT IDENTITY(1,1) CONSTRAINT PK_Logs_Table PRIMARY KEY,
+    LogLevel NVARCHAR(50) NOT NULL,
+    Message NVARCHAR(500) NOT NULL,
+    CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_Logs_Table_CreatedAt DEFAULT(SYSDATETIME())
+);
 GO
 
 CREATE VIEW dbo.vw_SiparisOzet AS
@@ -154,7 +163,7 @@ BEGIN
     SET NOCOUNT ON;
     IF NOT EXISTS (SELECT 1 FROM @Detaylar)
     BEGIN
-        RAISERROR (N'Detay listesi boþ olamaz.',16,1);
+        RAISERROR (N'Detay listesi boÃ¾ olamaz.',16,1);
         RETURN;
     END
     BEGIN TRAN;
@@ -259,16 +268,16 @@ END;
 GO
 
 INSERT INTO dbo.Musteriler(Ad,Soyad,Email) VALUES
-(N'Ali',N'Koç',N'ali@example.com'),
+(N'Ali',N'KoÃ§',N'ali@example.com'),
 (N'Veli',N'Boz',N'veli@example.com'),
-(N'Melih',N'Coþkun',N'melih@example.com');
+(N'Melih',N'CoÃ¾kun',N'melih@example.com');
 
 INSERT INTO dbo.Kategoriler(KategoriAdi) VALUES
 (N'Elektronik'),(N'Kitap'),(N'Giyim');
 
-EXEC dbo.sp_UrunEkle N'Kulaklýk',N'SKU-1001',299.90,50;
-EXEC dbo.sp_UrunEkle N'Roman Kitabý',N'SKU-2001',89.90,120;
-EXEC dbo.sp_UrunEkle N'Tiþört',N'SKU-3001',149.90,80;
+EXEC dbo.sp_UrunEkle N'KulaklÃ½k',N'SKU-1001',299.90,50;
+EXEC dbo.sp_UrunEkle N'Roman KitabÃ½',N'SKU-2001',89.90,120;
+EXEC dbo.sp_UrunEkle N'TiÃ¾Ã¶rt',N'SKU-3001',149.90,80;
 
 INSERT INTO dbo.UrunKategorileri(UrunId,KategoriId) VALUES (1,1),(2,2),(3,3);
 
@@ -280,7 +289,7 @@ INSERT INTO @Yeni1 EXEC dbo.sp_SiparisOlustur_TVP @MusteriId=1,@Durum=N'Beklemed
 DECLARE @d2 dbo.tt_SiparisDetay;
 INSERT INTO @d2(UrunId,Miktar,BirimFiyat) VALUES (2,3,89.90);
 DECLARE @Yeni2 TABLE(SiparisId INT);
-INSERT INTO @Yeni2 EXEC dbo.sp_SiparisOlustur_TVP @MusteriId=2,@Durum=N'Onaylandý',@Detaylar=@d2;
+INSERT INTO @Yeni2 EXEC dbo.sp_SiparisOlustur_TVP @MusteriId=2,@Durum=N'OnaylandÃ½',@Detaylar=@d2;
 
 DECLARE @d3 dbo.tt_SiparisDetay;
 INSERT INTO @d3(UrunId,Miktar,BirimFiyat) VALUES (3,1,149.90);

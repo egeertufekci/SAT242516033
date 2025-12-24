@@ -264,7 +264,7 @@ BEGIN
         [SiparisId] int NOT NULL IDENTITY,
         [MusteriId] int NOT NULL,
         [SiparisTarihi] datetime2 NOT NULL,
-        [Durum] nvarchar(50) NOT NULL,
+        [Durum] nvarchar(30) NOT NULL,
         CONSTRAINT [PK_Siparisler] PRIMARY KEY ([SiparisId]),
         CONSTRAINT [FK_Siparisler_Musteriler_MusteriId] FOREIGN KEY ([MusteriId]) REFERENCES [Musteriler] ([MusteriId]) ON DELETE CASCADE
     );
@@ -303,6 +303,23 @@ BEGIN
     );
 END;
 GO
+
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20251109004522_CreateProductOrderSchema'
+)
+BEGIN
+    CREATE TABLE [Logs_Table] (
+        [LogId] int NOT NULL IDENTITY,
+        [LogLevel] nvarchar(50) NOT NULL,
+        [Message] nvarchar(500) NOT NULL,
+        [CreatedAt] datetime2 NOT NULL,
+        CONSTRAINT [PK_Logs_Table] PRIMARY KEY ([LogId])
+    );
+END;
+GO
+
 
 IF NOT EXISTS (
     SELECT * FROM [__EFMigrationsHistory]

@@ -238,6 +238,32 @@ namespace SAT242516033.Migrations
                     b.ToTable("Kategoriler");
                 });
 
+            modelBuilder.Entity("UrunSiparisTakip.Models.LogsTable", b =>
+                {
+                    b.Property<int>("LogId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("LogId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LogLevel")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("LogId");
+
+                    b.ToTable("Logs_Table");
+                });
+
             modelBuilder.Entity("UrunSiparisTakip.Models.Musteri", b =>
                 {
                     b.Property<int>("MusteriId")
@@ -276,8 +302,8 @@ namespace SAT242516033.Migrations
 
                     b.Property<string>("Durum")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<int>("MusteriId")
                         .HasColumnType("int");

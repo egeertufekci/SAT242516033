@@ -1,234 +1,161 @@
-﻿@page "/urunler"
-@using MyDbModels
-@using Providers
-@using System.Linq
-@using System.Text.Json
-@using Microsoft.JSInterop
+@page "/urunler"
+@using UrunSiparisTakip.Models
+@inject SAT242516033.Services.UrunService UrunService
 
 <PageTitle>Ürünler</PageTitle>
 
 <h3>Ürünler</h3>
 
-@if (_myDbModel != null)
+@if (_isLoading)
 {
-    @if (_operation == "list")
+    <p>Yükleniyor...</p>
+}
+else
+{
+    @if (_mode == "list")
     {
         <table class="table table-striped">
             <thead>
                 <tr>
                     <th>
-                        <button class="btn btn-outline-success"
-                                @onclick="() => OnClick_New()">
-                            New
-                        </button>
+                        <button class="btn btn-outline-success" @onclick="OnClickNew">Yeni</button>
                     </th>
-
                     <th>UrunId</th>
                     <th>UrunAdi</th>
                     <th>SKU</th>
                     <th>BirimFiyat</th>
                     <th>StokAdet</th>
+                    <th>Aktif</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var item in _myDbModel.Items)
+                @foreach (var item in _urunler)
                 {
                     <tr>
                         <td>
-                            <button class="btn btn-outline-warning"
-                                    @onclick="() => OnClick_Edit(item.UrunId)">
-                                Edit
-                            </button>
-                            <button class="btn btn-outline-danger"
-                                    @onclick="() => OnClick_Remove(item.UrunId)">
-                                Sil
-                            </button>
+                            <button class="btn btn-outline-warning" @onclick="() => OnClickEdit(item)">Düzenle</button>
+                            <button class="btn btn-outline-danger" @onclick="() => OnClickRemove(item)">Sil</button>
                         </td>
-
                         <td>@item.UrunId</td>
                         <td>@item.UrunAdi</td>
                         <td>@item.SKU</td>
                         <td>@item.BirimFiyat</td>
                         <td>@item.StokAdet</td>
+                        <td>@(item.AktifMi ? "Evet" : "Hayır")</td>
                     </tr>
                 }
             </tbody>
         </table>
+    }
 
-        @if (!string.IsNullOrWhiteSpace(_myDbModel.Message))
-        {
-            <div class="alert alert-warning mt-2">
-                @_myDbModel.Message
+    @if (_mode == "new" || _mode == "edit")
+    {
+        <EditForm Model="_model" OnValidSubmit="OnSubmitAsync">
+            <DataAnnotationsValidator />
+            <div class="mb-2">
+                <label class="form-label">Ürün Adı</label>
+                <InputText class="form-control" @bind-Value="_model.UrunAdi" />
             </div>
-        }
+            <div class="mb-2">
+                <label class="form-label">SKU</label>
+                <InputText class="form-control" @bind-Value="_model.SKU" />
+            </div>
+            <div class="mb-2">
+                <label class="form-label">Birim Fiyat</label>
+                <InputNumber class="form-control" @bind-Value="_model.BirimFiyat" />
+            </div>
+            <div class="mb-2">
+                <label class="form-label">Stok Adet</label>
+                <InputNumber class="form-control" @bind-Value="_model.StokAdet" />
+            </div>
+            <div class="form-check mb-2">
+                <InputCheckbox class="form-check-input" @bind-Value="_model.AktifMi" />
+                <label class="form-check-label">Aktif</label>
+            </div>
+            <ValidationSummary />
+            <button class="btn btn-success" type="submit">Kaydet</button>
+            <button class="btn btn-outline-dark" type="button" @onclick="OnClickCancel">İptal</button>
+        </EditForm>
     }
 
-    @if (_operation == "new")
+    @if (_mode == "remove")
     {
-        <input type="text" @bind="_model.UrunAdi" placeholder="UrunAdi" />
-        <input type="text" @bind="_model.SKU" placeholder="SKU" />
-        <input type="number" step="0.01" @bind="_model.BirimFiyat" placeholder="BirimFiyat" />
-        <input type="number" @bind="_model.StokAdet" placeholder="StokAdet" />
-
-        <button class="btn btn-success"
-                @onclick="() => OnClick_Add()">
-            Add
-        </button>
-        <button class="btn btn-outline-dark"
-                @onclick="() => OnClick_Cancel()">
-            Cancel
-        </button>
-    }
-
-    @if (_operation == "edit")
-    {
-        <input type="text" @bind="_model.UrunAdi" placeholder="UrunAdi" />
-        <input type="text" @bind="_model.SKU" placeholder="SKU" />
-        <input type="number" step="0.01" @bind="_model.BirimFiyat" placeholder="BirimFiyat" />
-        <input type="number" @bind="_model.StokAdet" placeholder="StokAdet" />
-
-        <button class="btn btn-warning"
-                @onclick="() => OnClick_Update()">
-            Update
-        </button>
-        <button class="btn btn-outline-dark"
-                @onclick="() => OnClick_Cancel()">
-            Cancel
-        </button>
-    }
-
-    @if (_operation == "remove")
-    {
-        <input type="text" @bind="_model.UrunAdi" readonly />
-        <input type="text" @bind="_model.SKU" readonly />
-        <input type="text" value="@_model.BirimFiyat" readonly />
-        <input type="text" value="@_model.StokAdet" readonly />
-
-        <button class="btn btn-danger"
-                @onclick="() => OnClick_Save()">
-            Remove
-        </button>
-        <button class="btn btn-outline-dark"
-                @onclick="() => OnClick_Cancel()">
-            Cancel
-        </button>
+        <div class="alert alert-warning">
+            <p>@_model.UrunAdi ürününü silmek istediğinize emin misiniz?</p>
+            <button class="btn btn-danger" @onclick="OnConfirmDeleteAsync">Sil</button>
+            <button class="btn btn-outline-dark" @onclick="OnClickCancel">İptal</button>
+        </div>
     }
 }
 
-@inject IMyDbModel<Model> _myDbModel
-@inject IMyDbModel_Provider _myDbModel_Provider
-@inject IJSRuntime JS
-
 @code {
+    private bool _isLoading = true;
+    private string _mode = "list";
+    private Urun _model = new();
+    private List<Urun> _urunler = new();
 
-    string _operation = "list";
-    Model _model = new Model();
-
-    private void OnClick_New()
+    protected override async Task OnInitializedAsync()
     {
-        _operation = "new";
-        _model = new Model(); // AktifMi default true zaten
+        await LoadAsync();
     }
 
-    private void OnClick_Edit(int? id)
+    private async Task LoadAsync()
     {
-        _operation = "edit";
-        _model = _myDbModel.Items.FirstOrDefault(f => f.UrunId == id) ?? new Model();
+        _isLoading = true;
+        _urunler = await UrunService.GetAllAsync();
+        _isLoading = false;
     }
 
-    private void OnClick_Remove(int? id)
+    private void OnClickNew()
     {
-        _operation = "remove";
-        _model = _myDbModel.Items.FirstOrDefault(f => f.UrunId == id) ?? new Model();
+        _mode = "new";
+        _model = new Urun { AktifMi = true };
     }
 
-    private async void OnClick_Add()
+    private void OnClickEdit(Urun urun)
     {
-        _operation = "add";
-
-        // ✅ UI'da yok ama DB'de aktif olsun
-        _model.AktifMi = true;
-
-        var jsonvalues = JsonSerializer.Serialize(_model);
-
-        var results = await _myDbModel_Provider
-            .SetItems<MyDbModel_Result_KeyValue<string, bool>>("sp_Urun_Add_Update_Remove",
-                ("operation", _operation),
-                ("jsonvalues", jsonvalues)
-            );
-
-        var result = results.FirstOrDefault();
-        await JS.InvokeVoidAsync("alert", $"{result.Key} : {result.Value}");
-
-        await GetItems();
-    }
-
-    private async void OnClick_Update()
-    {
-        _operation = "update";
-
-        // ✅ güncellemede de aktif kalsın
-        _model.AktifMi = true;
-
-        var jsonvalues = JsonSerializer.Serialize(_model);
-
-        var results = await _myDbModel_Provider
-            .SetItems<MyDbModel_Result_KeyValue<string, bool>>("sp_Urun_Add_Update_Remove",
-                ("operation", _operation),
-                ("jsonvalues", jsonvalues)
-            );
-
-        var result = results.FirstOrDefault();
-        await JS.InvokeVoidAsync("alert", $"{result.Key} : {result.Value}");
-
-        await GetItems();
-    }
-
-    private async void OnClick_Save()
-    {
-        _operation = "remove";
-
-        var jsonvalues = JsonSerializer.Serialize(_model);
-
-        var results = await _myDbModel_Provider
-            .SetItems<MyDbModel_Result_KeyValue<string, bool>>("sp_Urun_Add_Update_Remove",
-                ("operation", _operation),
-                ("jsonvalues", jsonvalues)
-            );
-
-        var result = results.FirstOrDefault();
-        await JS.InvokeVoidAsync("alert", $"{result.Key} : {result.Value}");
-
-        await GetItems();
-    }
-
-    private void OnClick_Cancel()
-    {
-        _operation = "list";
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
+        _mode = "edit";
+        _model = new Urun
         {
-            await GetItems();
+            UrunId = urun.UrunId,
+            UrunAdi = urun.UrunAdi,
+            SKU = urun.SKU,
+            BirimFiyat = urun.BirimFiyat,
+            StokAdet = urun.StokAdet,
+            AktifMi = urun.AktifMi
+        };
+    }
+
+    private void OnClickRemove(Urun urun)
+    {
+        _mode = "remove";
+        _model = urun;
+    }
+
+    private async Task OnSubmitAsync()
+    {
+        if (_mode == "new")
+        {
+            await UrunService.CreateAsync(_model);
         }
+        else if (_mode == "edit")
+        {
+            await UrunService.UpdateAsync(_model);
+        }
+
+        _mode = "list";
+        await LoadAsync();
     }
 
-    async Task GetItems()
+    private async Task OnConfirmDeleteAsync()
     {
-        _operation = "list";
-        await _myDbModel_Provider.Execute<Model>(_myDbModel, "sp_UrunListele");
-        StateHasChanged();
+        await UrunService.DeleteAsync(_model.UrunId);
+        _mode = "list";
+        await LoadAsync();
     }
 
-    class Model
+    private void OnClickCancel()
     {
-        public int UrunId { get; set; }
-        public string UrunAdi { get; set; } = "";
-        public string SKU { get; set; } = "";
-        public decimal BirimFiyat { get; set; }
-        public int StokAdet { get; set; }
-        public bool AktifMi { get; set; } = true;
+        _mode = "list";
     }
 }

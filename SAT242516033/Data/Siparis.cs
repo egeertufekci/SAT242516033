@@ -17,7 +17,7 @@ namespace UrunSiparisTakip.Models
         public DateTime SiparisTarihi { get; set; }
 
         // dbo.DurumType kullanıcı tanımlı tür — burada sade string olarak tutuluyor
-        [Required, MaxLength(50)]
+        [Required, MaxLength(30)]
         public string Durum { get; set; } = "Beklemede";
 
         // Navigations
