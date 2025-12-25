@@ -1,17 +1,15 @@
 ﻿@page "/login"
 @page "/Account/Login"
+@using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Authorization
-@attribute [AllowAnonymous]  
+@using Microsoft.AspNetCore.Identity
+@using SAT242516033.Data
+@attribute [AllowAnonymous]
 @layout SAT242516033.Components.Layout.EmptyLayout
-@using SAT242516033.Models
-@using SAT242516033.Models.MyServices
-@inject AuthService AuthService
-@inject AuthenticationStateProvider AuthStateProvider
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager NavManager
-@inject IJSRuntime js
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
-
-
 
 <div class="container d-flex justify-content-center align-items-center" style="height: 80vh;">
     <div class="card shadow-lg p-4" style="width: 400px;">
@@ -21,68 +19,91 @@
         </div>
 
         <EditForm Model="@model" OnValidSubmit="GirisYap" FormName="login">
-            <DataAnnotationsValidator /> <ValidationSummary />
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
 
             <div class="mb-3">
-                <label>Kullanıcı Adı</label>
-                <InputText @bind-Value="model.KullaniciAdi" class="form-control" placeholder="admin" />
+                <label class="form-label">Kullanıcı Adı</label>
+                <InputText @bind-Value="model.KullaniciAdi" class="form-control" autocomplete="username" />
             </div>
             <div class="mb-3">
-                <label>Şifre</label>
-                <InputText @bind-Value="model.Sifre" type="password" class="form-control" placeholder="123" />
+                <label class="form-label">Şifre</label>
+                <InputText @bind-Value="model.Sifre" type="password" class="form-control" autocomplete="current-password" />
             </div>
 
-            @if (!string.IsNullOrEmpty(hataMesaji))
+            @if (!string.IsNullOrWhiteSpace(hataMesaji))
             {
                 <div class="alert alert-danger p-2 small">@hataMesaji</div>
             }
 
             <button type="submit" class="btn btn-primary w-100 py-2">Giriş Yap</button>
         </EditForm>
+
+        <div class="text-center mt-3">
+            <button type="button" class="btn btn-link" @onclick="KayitOl">Kayıt Ol</button>
+        </div>
     </div>
 </div>
 
 @code {
-    // DÜZELTME 2: SupplyParameterFromForm eklendi
     [SupplyParameterFromForm]
     public LoginModel model { get; set; } = new LoginModel();
 
-    private string hataMesaji;
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
+    private string? hataMesaji;
 
     private async Task GirisYap()
     {
-        // Önce model boş mu diye basit bir kontrol (FormName yoksa burası boş gelirdi)
-        if (string.IsNullOrWhiteSpace(model.KullaniciAdi) || string.IsNullOrWhiteSpace(model.Sifre))
+        hataMesaji = null;
+        var signInResult = await SignInManager.PasswordSignInAsync(
+            model.KullaniciAdi,
+            model.Sifre,
+            isPersistent: false,
+            lockoutOnFailure: false);
+
+        if (!signInResult.Succeeded)
         {
-            hataMesaji = "Alanları doldur kanki.";
+            hataMesaji = "Kullanıcı adı veya şifre hatalı!";
             return;
         }
 
-        var kullanici = await AuthService.LoginAsync(model.KullaniciAdi, model.Sifre);
+        var user = await UserManager.FindByNameAsync(model.KullaniciAdi);
+        var isAdmin = user != null && await UserManager.IsInRoleAsync(user, "Admin");
 
-        if (kullanici != null)
+        if (isAdmin)
         {
-            var customAuthStateProvider = (CustomAuthStateProvider)AuthStateProvider;
-
-            await customAuthStateProvider.UpdateAuthenticationState(new UserSession
-            {
-                UserName = kullanici.KullaniciAdi,
-                Role = kullanici.RolAdi ?? string.Empty
-            });
-
-            NavManager.NavigateTo("/");
+            NavManager.NavigateTo("/Yonetim/rol-yonetimi");
+            return;
         }
-        else
+
+        var target = "/";
+        if (!string.IsNullOrWhiteSpace(ReturnUrl) && Uri.IsWellFormedUriString(ReturnUrl, UriKind.Relative))
         {
-            hataMesaji = "Kullanıcı adı veya şifre hatalı!";
+            target = ReturnUrl;
         }
+
+        NavManager.NavigateTo(target);
     }
+
+    private void KayitOl()
+    {
+        var target = "/Account/Register";
+        if (!string.IsNullOrWhiteSpace(ReturnUrl) && Uri.IsWellFormedUriString(ReturnUrl, UriKind.Relative))
+        {
+            target = $"/Account/Register?returnUrl={Uri.EscapeDataString(ReturnUrl)}";
+        }
+
+        NavManager.NavigateTo(target);
+    }
+
     public class LoginModel
     {
-        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Kullanıcı adı lazım kanki.")]
-        public string KullaniciAdi { get; set; }
+        [Required(ErrorMessage = "Kullanıcı adı zorunludur.")]
+        public string KullaniciAdi { get; set; } = string.Empty;
 
-        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Şifreyi unuttun.")]
-        public string Sifre { get; set; }
+        [Required(ErrorMessage = "Şifre zorunludur.")]
+        public string Sifre { get; set; } = string.Empty;
     }
 }
