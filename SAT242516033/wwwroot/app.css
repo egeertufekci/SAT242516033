@@ -6,6 +6,16 @@ a, .btn-link {
     color: #006bb7;
 }
 
+.form-control {
+    color: #212529;
+    background-color: #fff;
+}
+
+.form-control::placeholder {
+    color: #6c757d;
+    opacity: 1;
+}
+
 .btn-primary {
     color: #fff;
     background-color: #1b6ec2;

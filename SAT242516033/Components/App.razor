@@ -11,12 +11,12 @@
     @* Prerender false: Login düşme sorununu engeller *@
     <HeadOutlet @rendermode="@(new InteractiveServerRenderMode(prerender: false))" />
 </head>
-<script src="js/lang.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-<script src="js/charts.js"></script>
 <body>
     <Routes @rendermode="@(new InteractiveServerRenderMode(prerender: false))" />
+    <script src="js/blazorCulture.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <script src="charts.js"></script>
     <script src="_framework/blazor.web.js"></script>
 </body>
 </html>
