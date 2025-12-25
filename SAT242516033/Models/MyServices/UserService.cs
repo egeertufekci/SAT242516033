@@ -1,5 +1,4 @@
-﻿using BlazorApp_C.Data; // <-- KANKA DİKKAT: ApplicationUser burada! (Eğer hata verirse namespace'i düzelt)
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using SAT242516033.Data;
 using System.Collections.Generic;
