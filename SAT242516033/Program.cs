@@ -4,14 +4,12 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using SAT242516033.Components;
 using SAT242516033.Components.Account;
-using SAT242516033.Data;
 using SAT242516033.Logging;
 using SAT242516033.Models.DbContexts;
 using SAT242516033.Models.MyDbModels;
 using SAT242516033.Models.Providers;
 using SAT242516033.Models.UnitOfWorks;
-using SAT242516033.Models.MyServices;
-using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using SAT242516033.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,19 +34,12 @@ builder.Services.AddRazorComponents()
 builder.Services.AddCascadingAuthenticationState(); // ÞART!
 builder.Services.AddHttpContextAccessor();
 
-// --- 3. SESSION VE AUTH AYARLARI (BURASI DÜZELTÝLDÝ) ---
-// Session Storage'ý bir kere ekliyoruz
-builder.Services.AddScoped<ProtectedSessionStorage>();
+// --- 3. SESSION VE AUTH AYARLARI ---
+builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
+builder.Services.AddScoped<IdentityUserAccessor>();
+builder.Services.AddScoped<IdentityRedirectManager>();
 
-// Standart Identity Provider YERÝNE sadece bizimkini ekliyoruz.
-// Eski kodda hem IdentityRevalidating hem Custom vardý, çakýþýyordu.
-builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
-
-// AuthService'i ekle
-builder.Services.AddScoped<AuthService>();
-
-// Yetkilendirme çekirdeðini ekle
-builder.Services.AddAuthorizationCore();
+builder.Services.AddAuthorization();
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultScheme = IdentityConstants.ApplicationScheme;
@@ -68,9 +59,17 @@ builder.Services.AddScoped<StatsService>();
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-// Identity ayarlarý (Veritabaný iþlemleri için kalsýn ama UI provider'ý bizimki olacak)
-builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
+// Identity ayarlarý
+builder.Services.AddIdentityCore<ApplicationUser>(options =>
+    {
+        options.SignIn.RequireConfirmedAccount = false;
+        options.Password.RequireNonAlphanumeric = false;
+        options.Password.RequireUppercase = false;
+        options.Password.RequireLowercase = false;
+        options.Password.RequiredLength = 6;
+    })
     .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddRoles<ApplicationRole>()
     .AddSignInManager()
     .AddDefaultTokenProviders();
 
@@ -148,6 +147,8 @@ else
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseAntiforgery();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
@@ -155,17 +156,48 @@ app.MapRazorComponents<App>()
 // Identity endpointlerini ekle (Kayýt ol vs. çalýþsýn diye)
 app.MapAdditionalIdentityEndpoints();
 
-// --- GEÇÝCÝ SEED KODU (app.Run();'dan önceye yapýþtýr) ---
+// --- ADMIN SEED ---
 using (var scope = app.Services.CreateScope())
 {
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-    var userCheck = await userManager.FindByEmailAsync("admin@test.com");
-    if (userCheck == null)
+
+    const string adminRoleName = "Admin";
+    const string adminUserName = "admin";
+    const string adminPassword = "admin123";
+
+    if (!await roleManager.RoleExistsAsync(adminRoleName))
     {
-        var user = new ApplicationUser { UserName = "admin", Email = "admin@test.com", EmailConfirmed = true };
-        await userManager.CreateAsync(user, "Admin123!"); // Þifre: Admin123!
+        await roleManager.CreateAsync(new ApplicationRole { Name = adminRoleName });
+    }
+
+    var adminUser = await userManager.FindByNameAsync(adminUserName);
+    if (adminUser == null)
+    {
+        adminUser = new ApplicationUser
+        {
+            UserName = adminUserName,
+            Email = "admin@test.com",
+            EmailConfirmed = true
+        };
+        await userManager.CreateAsync(adminUser, adminPassword);
+    }
+    else
+    {
+        adminUser.EmailConfirmed = true;
+        await userManager.UpdateAsync(adminUser);
+    }
+
+    if (!await userManager.CheckPasswordAsync(adminUser, adminPassword))
+    {
+        var resetToken = await userManager.GeneratePasswordResetTokenAsync(adminUser);
+        await userManager.ResetPasswordAsync(adminUser, resetToken, adminPassword);
+    }
+
+    if (!await userManager.IsInRoleAsync(adminUser, adminRoleName))
+    {
+        await userManager.AddToRoleAsync(adminUser, adminRoleName);
     }
 }
-// --- GEÇÝCÝ KOD SONU ---
 
 app.Run();
