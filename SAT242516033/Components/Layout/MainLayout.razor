@@ -1,8 +1,7 @@
 ﻿@inherits LayoutComponentBase
-@inject AuthenticationStateProvider AuthStateProvider
+@using Microsoft.AspNetCore.Identity
 @inject NavigationManager NavManager
-@using System.Security.Claims
-@using SAT242516033.Models.MyServices
+@inject SignInManager<SAT242516033.Data.ApplicationUser> SignInManager
 @inject LocalizerService<SAT242516033.Models.MyResources.MyResource> Localizer
 
 <div class="page">
@@ -77,10 +76,7 @@
 
     private async Task Logout()
     {
-        if (AuthStateProvider is CustomAuthStateProvider customAuth)
-        {
-            await customAuth.UpdateAuthenticationState(null);
-            NavManager.NavigateTo("/login", true);
-        }
+        await SignInManager.SignOutAsync();
+        NavManager.NavigateTo("/login", true);
     }
 }

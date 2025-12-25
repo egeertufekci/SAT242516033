@@ -1,8 +1,8 @@
 ﻿@implements IDisposable
 @inject NavigationManager NavigationManager
-@inject AuthenticationStateProvider AuthStateProvider
+@inject SignInManager<SAT242516033.Data.ApplicationUser> SignInManager
 @using Microsoft.AspNetCore.Components.Authorization
-@using System.Security.Claims
+@using Microsoft.AspNetCore.Identity
 @using SAT242516033.Models.Providers
 
 <div class="top-row ps-3 navbar navbar-dark">
@@ -133,12 +133,7 @@
 
     private async Task Logout()
     {
-        // CustomAuthStateProvider ismini kontrol et, senin projende neyse o olmalı.
-        // Genelde Cast işlemi gerekir
-        if (AuthStateProvider is SAT242516033.Models.MyServices.CustomAuthStateProvider customAuth)
-        {
-            await customAuth.UpdateAuthenticationState(null);
-            NavigationManager.NavigateTo("/login", true);
-        }
+        await SignInManager.SignOutAsync();
+        NavigationManager.NavigateTo("/login", true);
     }
 }
