@@ -1,13 +1,15 @@
 ﻿@page "/Account/Register"
 
 @using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Identity
 @using SAT242516033.Data
 
 @inject UserManager<ApplicationUser> UserManager
-@inject SignInManager<ApplicationUser> SignInManager
 @inject ILogger<Register> Logger
 @inject NavigationManager NavigationManager
+@attribute [AllowAnonymous]
+@layout SAT242516033.Components.Layout.EmptyLayout
 
 <PageTitle>Kayıt Ol</PageTitle>
 
@@ -16,9 +18,12 @@
         <div class="col-md-5">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <h3 class="card-title mb-3">Kayıt Ol</h3>
+                    <div class="text-center mb-3">
+                        <h3 class="card-title mb-1">Kayıt Ol</h3>
+                        <p class="text-muted mb-0">Personel Yönetim Sistemi</p>
+                    </div>
                     <StatusMessage Message="@Message" />
-                    <EditForm Model="Input" method="post" OnValidSubmit="RegisterUser" FormName="register">
+                    <EditForm Model="Input" OnValidSubmit="RegisterUser">
                         <DataAnnotationsValidator />
                         <ValidationSummary class="text-danger" role="alert" />
 
@@ -57,7 +62,6 @@
 @code {
     private IEnumerable<IdentityError>? identityErrors;
 
-    [SupplyParameterFromForm]
     private InputModel Input { get; set; } = new();
 
     [SupplyParameterFromQuery]
@@ -86,12 +90,10 @@
 
         Logger.LogInformation("User created a new account with password.");
 
-        await SignInManager.SignInAsync(user, isPersistent: false);
-
-        var target = "/";
+        var target = "/Account/Login";
         if (!string.IsNullOrWhiteSpace(ReturnUrl) && Uri.IsWellFormedUriString(ReturnUrl, UriKind.Relative))
         {
-            target = ReturnUrl;
+            target = $"/Account/Login?returnUrl={Uri.EscapeDataString(ReturnUrl)}";
         }
 
         NavigationManager.NavigateTo(target);
