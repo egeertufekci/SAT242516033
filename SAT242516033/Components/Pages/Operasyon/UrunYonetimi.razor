@@ -41,9 +41,9 @@
                             <td>@u.UrunId</td>
                             <td>@u.UrunAdi</td>
                             <td><span class="badge bg-info text-dark">@u.KategoriAdi</span></td>
-                            <td>@u.BirimFiyat.ToString("C2")</td>
-                            <td><span class="badge @(u.StokAdet < 10 ? "bg-danger" : "bg-success")">@u.StokAdet</span></td>
-                            <td>@(u.AktifMi ? "Aktif" : "Pasif")</td>
+                            <td>@(u.BirimFiyat.HasValue ? u.BirimFiyat.Value.ToString("C2") : "-")</td>
+                            <td><span class="badge @((u.StokAdet ?? 0) < 10 ? "bg-danger" : "bg-success")">@(u.StokAdet ?? 0)</span></td>
+                            <td>@(u.AktifMi == true ? "Aktif" : "Pasif")</td>
                             <td>
                                 <div class="btn-group btn-group-sm">
                                     <button class="btn btn-warning" @onclick="() => Duzenle(u)">Düzenle</button>
@@ -159,7 +159,7 @@
             ("KategoriId", aktifUrun.KategoriId),
             ("BirimFiyat", aktifUrun.BirimFiyat),
             ("StokAdet", aktifUrun.StokAdet),
-            ("AktifMi", aktifUrun.AktifMi)
+            ("AktifMi", aktifUrun.AktifMi ?? true)
         );
         gosterModal = false;
         await VerileriYukle();

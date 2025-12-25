@@ -11,10 +11,9 @@ namespace SAT242516033.Data
         [LocalizedDescription("ID", typeof(SAT242516033.Loc))]
         public int KategoriId { get; set; }
 
-        [Required]
         [Sortable(true)]
         [Viewable(true)]
         [LocalizedDescription("Kategori Adı", typeof(SAT242516033.Loc))]
-        public string KategoriAdi { get; set; }
+        public string? KategoriAdi { get; set; }
     }
 }

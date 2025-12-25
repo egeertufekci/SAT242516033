@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using SAT242516033.Components;
 using SAT242516033.Components.Account;
 using SAT242516033.Data;
@@ -11,7 +10,6 @@ using SAT242516033.Models.DbContexts;
 using SAT242516033.Models.MyDbModels;
 using SAT242516033.Models.Providers;
 using SAT242516033.Models.UnitOfWorks;
-using Microsoft.Data.SqlClient;
 using SAT242516033.Models.MyServices;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 
@@ -22,38 +20,34 @@ var logPath = Path.Combine(Directory.GetCurrentDirectory(), "Logs");
 if (!Directory.Exists(logPath)) Directory.CreateDirectory(logPath);
 
 var compositeLoggerProvider = new CompositeLoggerProvider()
-    .AddProvider(new AsyncFileLoggerProvider(Path.Combine("Logs", "app-log.txt")))
-    .AddProvider(new AsyncDbLoggerProvider(() =>
-        new SqlConnection(builder.Configuration.GetConnectionString("DefaultConnection"))
-    ));
+    .AddProvider(new AsyncFileLoggerProvider(Path.Combine("Logs", "app-log.txt")));
 
 builder.Logging.ClearProviders();
 builder.Logging.AddProvider(compositeLoggerProvider);
 
 builder.Services.AddSingleton(new LogService(
-    filePath: Path.Combine("Logs", "app-log.txt"),
-    connectionFactory: () => new SqlConnection(builder.Configuration.GetConnectionString("DefaultConnection"))
+    filePath: Path.Combine("Logs", "app-log.txt")
 ));
 
 // --- 2. BLAZOR TEMEL AYARLARI ---
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddCascadingAuthenticationState(); // ŞART!
+builder.Services.AddCascadingAuthenticationState(); // ÃART!
 builder.Services.AddHttpContextAccessor();
 
-// --- 3. SESSION VE AUTH AYARLARI (BURASI DÜZELTİLDİ) ---
-// Session Storage'ı bir kere ekliyoruz
+// --- 3. SESSION VE AUTH AYARLARI (BURASI DÃœZELTÃLDÃ) ---
+// Session Storage'Ã½ bir kere ekliyoruz
 builder.Services.AddScoped<ProtectedSessionStorage>();
 
-// Standart Identity Provider YERİNE sadece bizimkini ekliyoruz.
-// Eski kodda hem IdentityRevalidating hem Custom vardı, çakışıyordu.
+// Standart Identity Provider YERÃNE sadece bizimkini ekliyoruz.
+// Eski kodda hem IdentityRevalidating hem Custom vardÃ½, Ã§akÃ½Ã¾Ã½yordu.
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
 
 // AuthService'i ekle
 builder.Services.AddScoped<AuthService>();
 
-// Yetkilendirme çekirdeğini ekle
+// Yetkilendirme Ã§ekirdeÃ°ini ekle
 builder.Services.AddAuthorizationCore();
 builder.Services.AddAuthentication(options =>
 {
@@ -63,7 +57,7 @@ builder.Services.AddAuthentication(options =>
     .AddIdentityCookies();
 
 
-// --- 4. VERİTABANI BAĞLANTILARI ---
+// --- 4. VERÃTABANI BAÃLANTILARI ---
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
@@ -71,11 +65,10 @@ builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlSer
 builder.Services.AddDbContext<MyDbModel_DbContext>(options => options.UseSqlServer(connectionString));
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<StatsService>();
-builder.Services.AddScoped<DbLogService>();
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-// Identity ayarları (Veritabanı işlemleri için kalsın ama UI provider'ı bizimki olacak)
+// Identity ayarlarÃ½ (VeritabanÃ½ iÃ¾lemleri iÃ§in kalsÃ½n ama UI provider'Ã½ bizimki olacak)
 builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddSignInManager()
@@ -84,7 +77,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
 // --- 5. UNIT OF WORK & PROVIDERS ---
 // Generic UnitOfWork
 builder.Services.AddScoped<IMyDbModel_UnitOfWork, MyDbModel_UnitOfWork<MyDbModel_DbContext>>();
-// ApplicationDbContext kullanan UnitOfWork (Bunu da eklemişsin, kalsın)
+// ApplicationDbContext kullanan UnitOfWork (Bunu da eklemiÃ¾sin, kalsÃ½n)
 builder.Services.AddScoped<IMyDbModel_UnitOfWork, MyDbModel_UnitOfWork<ApplicationDbContext>>();
 
 // Generic Models
@@ -93,11 +86,11 @@ builder.Services.AddScoped(typeof(IMyDbModel<>), typeof(MyDbModel<>));
 // Providers
 builder.Services.AddScoped<IMyDbModel_Provider, MyDbModel_Provider>();
 
-// --- 6. LOCALIZATION (DİL) AYARLARI ---
+// --- 6. LOCALIZATION (DÃL) AYARLARI ---
 builder.Services.AddLocalization(options => options.ResourcesPath = Path.Combine("Models", "MyResources"));
 builder.Services.AddScoped(typeof(LocalizerService<>));
 
-// Controller Localization desteği
+// Controller Localization desteÃ°i
 builder.Services.AddControllers()
     .AddDataAnnotationsLocalization(options => {
         options.DataAnnotationLocalizerProvider = (type, factory) =>
@@ -115,10 +108,10 @@ builder.Services.Configure<RequestLocalizationOptions>(options =>
     options.RequestCultureProviders.Insert(2, new Microsoft.AspNetCore.Localization.AcceptLanguageHeaderRequestCultureProvider());
 });
 
-// --- EMAIL SENDER (Identity Hatası Vermesin Diye) ---
+// --- EMAIL SENDER (Identity HatasÃ½ Vermesin Diye) ---
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
-// --- APP BAŞLIYOR ---
+// --- APP BAÃLIYOR ---
 var app = builder.Build();
 
 // --- 7. DATABASE MIGRATION TRIGGER ---
@@ -126,15 +119,15 @@ using (var scope = app.Services.CreateScope())
 {
     try
     {
-        Console.WriteLine("Veritabanı bağlantısı kontrol ediliyor...");
-        // Bağlantıyı tetiklemek için ufak bir check
+        Console.WriteLine("VeritabanÃ½ baÃ°lantÃ½sÃ½ kontrol ediliyor...");
+        // BaÃ°lantÃ½yÃ½ tetiklemek iÃ§in ufak bir check
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        // db.Database.Migrate(); // Entity Framework kullanıyorsan açabilirsin
-        Console.WriteLine("Sistem Hazır.");
+        // db.Database.Migrate(); // Entity Framework kullanÃ½yorsan aÃ§abilirsin
+        Console.WriteLine("Sistem HazÃ½r.");
     }
     catch (Exception ex)
     {
-        Console.WriteLine("Başlatma hatası: " + ex.Message);
+        Console.WriteLine("BaÃ¾latma hatasÃ½: " + ex.Message);
     }
 }
 
@@ -159,10 +152,10 @@ app.UseAntiforgery();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-// Identity endpointlerini ekle (Kayıt ol vs. çalışsın diye)
+// Identity endpointlerini ekle (KayÃ½t ol vs. Ã§alÃ½Ã¾sÃ½n diye)
 app.MapAdditionalIdentityEndpoints();
 
-// --- GEÇİCİ SEED KODU (app.Run();'dan önceye yapıştır) ---
+// --- GEÃ‡ÃCÃ SEED KODU (app.Run();'dan Ã¶nceye yapÃ½Ã¾tÃ½r) ---
 using (var scope = app.Services.CreateScope())
 {
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
@@ -170,9 +163,9 @@ using (var scope = app.Services.CreateScope())
     if (userCheck == null)
     {
         var user = new ApplicationUser { UserName = "admin", Email = "admin@test.com", EmailConfirmed = true };
-        await userManager.CreateAsync(user, "Admin123!"); // Şifre: Admin123!
+        await userManager.CreateAsync(user, "Admin123!"); // Ãifre: Admin123!
     }
 }
-// --- GEÇİCİ KOD SONU ---
+// --- GEÃ‡ÃCÃ KOD SONU ---
 
 app.Run();

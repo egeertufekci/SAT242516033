@@ -1,16 +1,14 @@
 ﻿@page "/Yonetim/rol-yonetimi"
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize(Roles = "Admin")]
-@using System.Text.Json
 @using System.Reflection
-@using SAT242516033.Models.Providers
-@using SAT242516033.Models.MyDbModels
 @using SAT242516033.Data
 @using SAT242516033.Models.Extensions
 @using MyEnums
 @using SAT242516033.Models.Attributes
+@using Microsoft.EntityFrameworkCore
 
-@inject IMyDbModel_Provider DbProvider
+@inject SAT242516033.Models.DbContexts.MyDbModel_DbContext DbContext
 @inject IJSRuntime JSRuntime
 
 <div class="container-fluid">
@@ -42,7 +40,7 @@
                         <tr>
                             <td>
                                 <div class="btn-group">
-                                    <button class="btn btn-warning btn-sm" @onclick="() => OnClick_Operation(Operations.Update, item.RolID)">
+                                    <button class="btn btn-warning btn-sm" @onclick="() => OnClick_Operation(Operations.Update, item.RolId)">
                                         <i class="fa fa-edit"></i>
                                     </button>
                                     <button class="btn btn-danger btn-sm" @onclick="() => Sil(item)">
@@ -101,22 +99,34 @@
 
     async Task Yukle()
     {
-        var res = await DbProvider.Execute(new MyDbModel<Rol>(), "sp_Rol_Listele", true);
-        rolListesi = res?.Items.ToList();
+        rolListesi = await DbContext.Roller
+            .OrderBy(r => r.RolId)
+            .ToListAsync();
     }
 
     void OnClick_Operation(Operations op, int id = 0)
     {
         _op = op;
-        aktifRol = op == Operations.Add ? new Rol() : rolListesi.First(x => x.RolID == id);
+        aktifRol = op == Operations.Add ? new Rol() : rolListesi.First(x => x.RolId == id);
         modalGoster = true;
     }
 
     async Task Kaydet()
     {
-        await DbProvider.SetItems<object>("sp_Rol_EkleGuncelleSil",
-            ("operation", _op == Operations.Add ? "add" : "update"),
-            ("jsonvalues", JsonSerializer.Serialize(aktifRol)));
+        if (_op == Operations.Add)
+        {
+            DbContext.Roller.Add(aktifRol);
+        }
+        else
+        {
+            var mevcut = await DbContext.Roller.FirstOrDefaultAsync(r => r.RolId == aktifRol.RolId);
+            if (mevcut != null)
+            {
+                mevcut.RolAdi = aktifRol.RolAdi;
+            }
+        }
+
+        await DbContext.SaveChangesAsync();
         modalGoster = false;
         await Yukle();
     }
@@ -125,9 +135,8 @@
     {
         if (await JSRuntime.InvokeAsync<bool>("confirm", "Silinsin mi?"))
         {
-            await DbProvider.SetItems<object>("sp_Rol_EkleGuncelleSil",
-                ("operation", "remove"),
-                ("jsonvalues", JsonSerializer.Serialize(r)));
+            DbContext.Roller.Remove(r);
+            await DbContext.SaveChangesAsync();
             await Yukle();
         }
     }
