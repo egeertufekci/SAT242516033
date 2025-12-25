@@ -1,0 +1,55 @@
+﻿@page "/stats"
+@inject StatsService Service
+
+<h3>Sistem İstatistikleri</h3>
+
+@if (Istatistikler == null) // <-- BURAYI DÜZELT
+{
+    <p><em>Veriler yükleniyor...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary mb-3">
+                <div class="card-header">Ürünler</div>
+                <div class="card-body">
+                    <h5 class="card-title">@Istatistikler.ToplamUrun</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-header">Siparişler</div>
+                <div class="card-body">
+                    <h5 class="card-title">@Istatistikler.ToplamSiparis</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning mb-3">
+                <div class="card-header">Müşteriler</div>
+                <div class="card-body">
+                    <h5 class="card-title">@Istatistikler.ToplamMusteri</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-danger mb-3">
+                <div class="card-header">Kullanıcılar</div>
+                <div class="card-body">
+                    <h5 class="card-title">@Istatistikler.ToplamKullanici</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private StatsViewModel Istatistikler;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Istatistikler = await Service.GetStatsAsync();
+    }
+}

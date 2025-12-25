@@ -1,0 +1,167 @@
+﻿@page "/Operasyon/siparis-yonetimi"
+@using SAT242516033.Models.Providers
+@using SAT242516033.Models.MyDbModels
+@using SAT242516033.Data
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@attribute [Authorize]
+
+@inject IMyDbModel_Provider DbProvider
+@inject IJSRuntime JSRuntime
+@inject AuthenticationStateProvider AuthStateProvider
+
+<div class="container mt-4">
+    <h3>Sipariş Yönetimi</h3>
+
+    @if (siparisler == null)
+    {
+        <div class="spinner-border text-warning"></div>
+    }
+    else
+    {
+        <button class="btn btn-warning text-dark mb-3" @onclick="YeniEkle">
+            <i class="bi bi-cart-plus"></i> Yeni Sipariş
+        </button>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>Müşteri</th>
+                        <th>Tarih</th>
+                        <th>Durum</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in siparisler)
+                    {
+                        var musteriAdi = musteriler.FirstOrDefault(m => m.MusteriId == s.MusteriId)?.AdSoyad ?? "Bilinmiyor";
+                        <tr>
+                            <td>@s.SiparisId</td>
+                            <td>@musteriAdi</td>
+                            <td>@s.SiparisTarihi.ToShortDateString()</td>
+                            <td>@s.Durum</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-primary" @onclick="() => Duzenle(s)">Güncelle</button>
+                                    <button class="btn btn-danger" @onclick="() => Sil(s)">Sil</button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@if (gosterModal)
+{
+    <div class="modal fade show d-block" style="background: rgba(0,0,0,0.5)">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(aktifSiparis.SiparisId == 0 ? "Yeni Sipariş" : "Sipariş Güncelle")</h5>
+                    <button type="button" class="btn-close" @onclick="Kapat"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label>Müşteri</label>
+                        <select class="form-select" @bind="aktifSiparis.MusteriId">
+                            <option value="0">- Seçiniz -</option>
+                            @foreach (var m in musteriler)
+                            {
+                                <option value="@m.MusteriId">@m.AdSoyad</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label>Durum</label>
+                        <select class="form-select" @bind="aktifSiparis.Durum">
+                            <option>Beklemede</option>
+                            <option>Hazırlanıyor</option>
+                            <option>Kargolandı</option>
+                            <option>Tamamlandı</option>
+                            <option>İptal</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="Kapat">İptal</button>
+                    <button class="btn btn-primary" @onclick="Kaydet">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Siparis> siparisler;
+    private List<Musteri> musteriler = new List<Musteri>();
+    private Siparis aktifSiparis = new Siparis();
+    private bool gosterModal = false;
+    private string userId = "1";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        userId = authState.User.Identity?.Name ?? "1";
+        await VerileriYukle();
+    }
+
+    private async Task VerileriYukle()
+    {
+        // YENİ HALİ: Sadece Tip ve SP Adı yeterli. Fazlalıklara gerek yok.
+        var sRes = await DbProvider.Execute<Siparis>("sp_Siparisler");
+        siparisler = sRes?.Items?.ToList() ?? new List<Siparis>();
+
+        var mRes = await DbProvider.Execute<Musteri>("sp_Musteriler");
+        musteriler = mRes?.Items?.ToList() ?? new List<Musteri>();
+    }
+
+    private void YeniEkle()
+    {
+        aktifSiparis = new Siparis { SiparisTarihi = DateTime.Now, Durum = "Beklemede" };
+        gosterModal = true;
+    }
+
+    private void Duzenle(Siparis s)
+    {
+        aktifSiparis = new Siparis { SiparisId = s.SiparisId, MusteriId = s.MusteriId, Durum = s.Durum, UserId = s.UserId };
+        gosterModal = true;
+    }
+
+    private async Task Kaydet()
+    {
+        if (aktifSiparis.MusteriId == 0) { await JSRuntime.InvokeVoidAsync("alert", "Müşteri Seç!"); return; }
+
+        int islemTuru = aktifSiparis.SiparisId == 0 ? 1 : 2;
+
+        // DÜZELTİLDİ: Gereksiz Model ve Bool parametreleri silindi, SP adı başa geldi.
+        await DbProvider.Execute<Siparis>("sp_Siparis_Add_Update_Remove",
+            ("IslemTuru", islemTuru),
+            ("SiparisId", aktifSiparis.SiparisId),
+            ("MusteriId", aktifSiparis.MusteriId),
+            ("Durum", aktifSiparis.Durum),
+            ("UserId", userId)
+        );
+        gosterModal = false;
+        await VerileriYukle();
+    }
+
+    private async Task Sil(Siparis s)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Silinsin mi?")) return;
+
+        // DÜZELTİLDİ: Gereksiz parametreler temizlendi.
+        await DbProvider.Execute<Siparis>("sp_Siparis_Add_Update_Remove",
+            ("IslemTuru", 3),
+            ("SiparisId", s.SiparisId)
+        );
+        await VerileriYukle();
+    }
+
+    private void Kapat() => gosterModal = false;
+}

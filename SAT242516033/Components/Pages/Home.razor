@@ -1,0 +1,88 @@
+﻿@page "/"
+@using SAT242516033.Models.Providers
+@using SAT242516033.Models.MyDbModels
+@using SAT242516033.Data
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+
+@* Bu Attribute için yukarıdaki Microsoft.AspNetCore.Authorization şart *@
+@attribute [Authorize]
+
+@inject IMyDbModel_Provider DbProvider
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Ana Sayfa</PageTitle>
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12 mb-4">
+            <h1 class="display-6 fw-bold text-primary">Hoşgeldin, @userName!</h1>
+            <p class="text-muted">Üretim ve Sipariş Takip Sistemi Özeti</p>
+        </div>
+    </div>
+
+    <div class="row">
+        @* KART 1: MÜŞTERİLER *@
+        <div class="col-md-4">
+            <div class="card shadow-sm border-start border-primary border-5 mb-3">
+                <div class="card-body">
+                    <h5 class="card-title text-muted">Toplam Müşteri</h5>
+                    <h2 class="fw-bold">@musteriSayisi</h2>
+                    <a href="/Operasyon/musteri-yonetimi" class="btn btn-sm btn-outline-primary mt-2">Yönet</a>
+                </div>
+            </div>
+        </div>
+
+        @* KART 2: ÜRÜNLER *@
+        <div class="col-md-4">
+            <div class="card shadow-sm border-start border-success border-5 mb-3">
+                <div class="card-body">
+                    <h5 class="card-title text-muted">Stoktaki Ürünler</h5>
+                    <h2 class="fw-bold">@urunSayisi</h2>
+                    <a href="/Operasyon/urun-yonetimi" class="btn btn-sm btn-outline-success mt-2">Yönet</a>
+                </div>
+            </div>
+        </div>
+
+        @* KART 3: SİPARİŞLER *@
+        <div class="col-md-4">
+            <div class="card shadow-sm border-start border-warning border-5 mb-3">
+                <div class="card-body">
+                    <h5 class="card-title text-muted">Toplam Sipariş</h5>
+                    <h2 class="fw-bold">@siparisSayisi</h2>
+                    <a href="/Operasyon/siparis-yonetimi" class="btn btn-sm btn-outline-warning mt-2">Yönet</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string userName = "Kullanıcı";
+    private int musteriSayisi = 0;
+    private int urunSayisi = 0;
+    private int siparisSayisi = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // KULLANICI ADINI GÜVENLİ ŞEKİLDE AL
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity != null && user.Identity.IsAuthenticated)
+        {
+            userName = user.Identity.Name ?? "Kullanıcı";
+        }
+
+        // VERİLERİ ÇEK
+        var mSonuc = await DbProvider.Execute(new MyDbModel<Musteri>(), "sp_Musteriler", true);
+        if (mSonuc?.Items != null) musteriSayisi = mSonuc.Items.Count();
+
+        var uSonuc = await DbProvider.Execute(new MyDbModel<Urun>(), "sp_UrunListele", true);
+        if (uSonuc?.Items != null) urunSayisi = uSonuc.Items.Count();
+
+        var sSonuc = await DbProvider.Execute(new MyDbModel<Siparis>(), "sp_Siparisler", true);
+        if (sSonuc?.Items != null) siparisSayisi = sSonuc.Items.Count();
+    }
+}

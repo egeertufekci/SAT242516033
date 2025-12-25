@@ -1,0 +1,88 @@
+﻿@page "/login"
+@page "/Account/Login"
+@using Microsoft.AspNetCore.Authorization
+@attribute [AllowAnonymous]  
+@layout SAT242516033.Components.Layout.EmptyLayout
+@using SAT242516033.Models
+@using SAT242516033.Models.MyServices
+@inject AuthService AuthService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavManager
+@inject IJSRuntime js
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+
+
+<div class="container d-flex justify-content-center align-items-center" style="height: 80vh;">
+    <div class="card shadow-lg p-4" style="width: 400px;">
+        <div class="text-center mb-4">
+            <h3 class="fw-bold text-primary">Giriş Yap</h3>
+            <p class="text-muted">Personel Yönetim Sistemi</p>
+        </div>
+
+        <EditForm Model="@model" OnValidSubmit="GirisYap" FormName="login">
+            <DataAnnotationsValidator /> <ValidationSummary />
+
+            <div class="mb-3">
+                <label>Kullanıcı Adı</label>
+                <InputText @bind-Value="model.KullaniciAdi" class="form-control" placeholder="admin" />
+            </div>
+            <div class="mb-3">
+                <label>Şifre</label>
+                <InputText @bind-Value="model.Sifre" type="password" class="form-control" placeholder="123" />
+            </div>
+
+            @if (!string.IsNullOrEmpty(hataMesaji))
+            {
+                <div class="alert alert-danger p-2 small">@hataMesaji</div>
+            }
+
+            <button type="submit" class="btn btn-primary w-100 py-2">Giriş Yap</button>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    // DÜZELTME 2: SupplyParameterFromForm eklendi
+    [SupplyParameterFromForm]
+    public LoginModel model { get; set; } = new LoginModel();
+
+    private string hataMesaji;
+
+    private async Task GirisYap()
+    {
+        // Önce model boş mu diye basit bir kontrol (FormName yoksa burası boş gelirdi)
+        if (string.IsNullOrWhiteSpace(model.KullaniciAdi) || string.IsNullOrWhiteSpace(model.Sifre))
+        {
+            hataMesaji = "Alanları doldur kanki.";
+            return;
+        }
+
+        var kullanici = await AuthService.LoginAsync(model.KullaniciAdi, model.Sifre);
+
+        if (kullanici != null)
+        {
+            var customAuthStateProvider = (CustomAuthStateProvider)AuthStateProvider;
+
+            await customAuthStateProvider.UpdateAuthenticationState(new UserSession
+            {
+                UserName = kullanici.KullaniciAdi,
+                Role = kullanici.RolAdi
+            });
+
+            NavManager.NavigateTo("/");
+        }
+        else
+        {
+            hataMesaji = "Kullanıcı adı veya şifre hatalı!";
+        }
+    }
+    public class LoginModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Kullanıcı adı lazım kanki.")]
+        public string KullaniciAdi { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Şifreyi unuttun.")]
+        public string Sifre { get; set; }
+    }
+}

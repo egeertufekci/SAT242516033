@@ -1,0 +1,112 @@
+﻿@page "/profil"
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavManager
+@attribute [Authorize]
+
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-user-circle fa-5x text-secondary"></i>
+                    </div>
+                    <h4>@KullaniciAdi</h4>
+                    <p class="text-muted">@Rol</p>
+                    <hr />
+                    <div class="text-start">
+                        <p><strong>Kullanıcı ID:</strong> @KullaniciId</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Özet Paneli</h5>
+                </div>
+                <div class="card-body">
+
+                    @if (Rol == "Admin")
+                    {
+                        <div class="alert alert-info">
+                            <i class="fas fa-crown me-2"></i> Yönetici paneline hoşgeldiniz.
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="card text-white bg-success h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Toplam Personel</h5>
+                                        <p class="card-text display-6">24</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="card text-white bg-warning h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Toplam Maaş Ödemesi</h5>
+                                        <p class="card-text display-6">₺850.000</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else if (Rol == "Personel")
+                    {
+                        <div class="alert alert-secondary">
+                            <i class="fas fa-briefcase me-2"></i> Personel paneline hoşgeldiniz.
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="card border-primary h-100">
+                                    <div class="card-body text-primary">
+                                        <h5 class="card-title">Kalan İzin Hakkı</h5>
+                                        <p class="card-text display-6">14 Gün</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="card border-success h-100">
+                                    <div class="card-body text-success">
+                                        <h5 class="card-title">Son Yatan Maaş</h5>
+                                        <p class="card-text display-6">₺32.000</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string KullaniciAdi = "";
+    private string Rol = "";
+    private string KullaniciId = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity.IsAuthenticated)
+        {
+            KullaniciAdi = user.Identity.Name;
+
+            // Claims içinden Rol ve ID'yi çekiyoruz
+            Rol = user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value ?? "Rol Yok";
+            KullaniciId = user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value; // ID'yi claim olarak attıysan
+
+            // BURADA: KullaniciId ile veritabanına sorgu atıp o display-6 yazdığım yerleri dolduracaksın.
+            // Örnek: var stats = _service.GetStats(KullaniciId);
+        }
+    }
+}

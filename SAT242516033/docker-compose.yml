@@ -1,0 +1,35 @@
+﻿version: "3.9"
+
+services:
+  BlazorApp_C:
+    build: .
+    container_name: BlazorApp_C
+    ports:
+      - "8091:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=${DB_CONNECTION_A}
+      - SITE=A
+    restart: unless-stopped
+
+  BlazorApp_C:
+    build: .
+    container_name: BlazorApp_C
+    ports:
+      - "8092:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=${DB_CONNECTION_B}
+      - SITE=B
+    restart: unless-stopped
+
+  blazorapp_c:
+    build: .
+    container_name: blazorapp_c
+    ports:
+      - "8093:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=${DB_CONNECTION_C}
+      - SITE=C
+    restart: unless-stopped

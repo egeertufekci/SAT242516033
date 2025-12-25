@@ -1,0 +1,53 @@
+﻿@page "/logs"
+@inject DbLogService Service
+@using SAT242516033.Models.DbContexts
+@using SAT242516033.Data
+
+<h3>Sistem Logları (Son 100)</h3>
+
+@if (LogListesi == null)
+{
+    <p><em>Loglar yükleniyor...</em></p>
+}
+else if (LogListesi.Count == 0)
+{
+    <div class="alert alert-info">Sistemde henüz log kaydı yok.</div>
+}
+else
+{
+    <table class="table table-sm table-hover">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Kullanıcı</th>
+                <th>İşlem</th>
+                <th>Tarih</th>
+                <th>Açıklama</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var log in LogListesi)
+            {
+                <tr>
+                    <td>@log.LogId</td>
+                    <td>@log.TableName</td>
+                    <td>@log.Operation</td>
+                    <td>@log.KeyInfo</td>
+                    <td>@log.JsonData</td>
+                    <td>@log.UserName</td>
+                    <td>@log.CreatedAt</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    // Logs_Table sınıfını using ile eklemeyi unutma
+    private List<Logs_Table> LogListesi;
+
+    protected override async Task OnInitializedAsync()
+    {
+        LogListesi = await Service.GetLogsAsync();
+    }
+}

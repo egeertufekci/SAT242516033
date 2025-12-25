@@ -1,0 +1,134 @@
+﻿@page "/Yonetim/rol-yonetimi"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin")]
+@using System.Text.Json
+@using System.Reflection
+@using SAT242516033.Models.Providers
+@using SAT242516033.Models.MyDbModels
+@using SAT242516033.Data
+@using SAT242516033.Models.Extensions
+@using MyEnums
+@using SAT242516033.Models.Attributes
+
+@inject IMyDbModel_Provider DbProvider
+@inject IJSRuntime JSRuntime
+
+<div class="container-fluid">
+    <div class="row mb-3 align-items-center">
+        <div class="col-md-6"><h3>Rol Yönetimi</h3></div>
+        <div class="col-md-6 text-end">
+            <button class="btn btn-primary" @onclick="() => OnClick_Operation(Operations.Add)">
+                <i class="fa fa-plus"></i> Yeni Rol
+            </button>
+        </div>
+    </div>
+
+    @if (rolListesi != null)
+    {
+        <div class="table-responsive shadow-sm">
+            <table class="table table-striped table-hover table-bordered align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th style="width: 200px;">İşlemler</th>
+                        @foreach (var prop in GetProperties().Where(p => p.Viewable()))
+                        {
+                            <th>@prop.LocalizedDescription()</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in rolListesi)
+                    {
+                        <tr>
+                            <td>
+                                <div class="btn-group">
+                                    <button class="btn btn-warning btn-sm" @onclick="() => OnClick_Operation(Operations.Update, item.RolID)">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" @onclick="() => Sil(item)">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                            @foreach (var prop in GetProperties().Where(p => p.Viewable()))
+                            {
+                                <td>@prop.GetValue(item)</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@if (modalGoster)
+{
+    <div class="modal fade show" style="display:block; background:rgba(0,0,0,0.5)">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title">@(_op == Operations.Add ? "Yeni Rol" : "Rol Düzenle")</h5>
+                    <button class="btn-close" @onclick="() => modalGoster = false"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="aktifRol" OnValidSubmit="Kaydet">
+                        <DataAnnotationsValidator />
+                        <div class="mb-3">
+                            <label class="form-label">Rol Adı</label>
+                            <InputText class="form-control" @bind-Value="aktifRol.RolAdi" />
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="() => modalGoster = false">İptal</button>
+                            <button type="submit" class="btn btn-success">Kaydet</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    List<Rol> rolListesi;
+    Rol aktifRol = new Rol();
+    bool modalGoster = false;
+    Operations _op;
+
+    IEnumerable<PropertyInfo> GetProperties() => typeof(Rol).GetProperties().Where(p => p.GetIndexParameters().Length == 0);
+
+    protected override async Task OnInitializedAsync() => await Yukle();
+
+    async Task Yukle()
+    {
+        var res = await DbProvider.Execute(new MyDbModel<Rol>(), "sp_Rol_Listele", true);
+        rolListesi = res?.Items.ToList();
+    }
+
+    void OnClick_Operation(Operations op, int id = 0)
+    {
+        _op = op;
+        aktifRol = op == Operations.Add ? new Rol() : rolListesi.First(x => x.RolID == id);
+        modalGoster = true;
+    }
+
+    async Task Kaydet()
+    {
+        await DbProvider.SetItems<object>("sp_Rol_EkleGuncelleSil",
+            ("operation", _op == Operations.Add ? "add" : "update"),
+            ("jsonvalues", JsonSerializer.Serialize(aktifRol)));
+        modalGoster = false;
+        await Yukle();
+    }
+
+    async Task Sil(Rol r)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Silinsin mi?"))
+        {
+            await DbProvider.SetItems<object>("sp_Rol_EkleGuncelleSil",
+                ("operation", "remove"),
+                ("jsonvalues", JsonSerializer.Serialize(r)));
+            await Yukle();
+        }
+    }
+}

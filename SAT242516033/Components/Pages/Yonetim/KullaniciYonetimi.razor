@@ -1,0 +1,48 @@
+﻿@page "/yonetim/kullanici-yonetimi"
+@using Microsoft.AspNetCore.Authorization
+@inject IUserService UserService
+
+<h3>Kullanıcı Yönetimi</h3>
+
+@if (Users == null)
+{
+    <p><em>Yükleniyor... (Veri bekleniyor)</em></p>
+}
+else if (Users.Count == 0)
+{
+    <div class="alert alert-warning">
+        Kayıtlı kullanıcı bulunamadı! Veritabanı boş olabilir.
+    </div>
+}
+else
+{
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                <th>Kullanıcı Adı</th>
+                <th>Email</th>
+                <th>ID</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in Users)
+            {
+                <tr>
+                    <td>@user.UserName</td>
+                    <td>@user.Email</td>
+                    <td>@user.Id</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<UserViewModel> Users;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Servisi çağırıyoruz
+        Users = await UserService.GetUsersAsync();
+    }
+}

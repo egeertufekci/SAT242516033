@@ -1,0 +1,25 @@
+﻿@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@using System.Globalization
+
+<select @onchange="ChangeLanguage" class="form-select form-select-sm border rounded" style="width: auto; display: inline-block;">
+    <option value="tr" selected="@IsSelected("tr")">🇹🇷 Türkçe</option>
+    <option value="en" selected="@IsSelected("en")">🇬🇧 English</option>
+</select>
+
+@code {
+    private string CurrentCulture => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+
+    private bool IsSelected(string culture) => culture == CurrentCulture;
+
+    private async Task ChangeLanguage(ChangeEventArgs e)
+    {
+        var selectedCulture = e.Value?.ToString() ?? "tr";
+
+        // JS fonksiyonunu çağırıp Cookie'yi güncelliyoruz
+        await JS.InvokeVoidAsync("setCultureCookie", selectedCulture);
+
+        // Sayfayı yeniliyoruz ki yeni dil yüklensin
+        Navigation.NavigateTo(Navigation.Uri, true);
+    }
+}

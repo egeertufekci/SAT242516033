@@ -1,0 +1,86 @@
+﻿@inherits LayoutComponentBase
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavManager
+@using System.Security.Claims
+@using SAT242516033.Models.MyServices
+@inject LocalizerService<SAT242516033.Models.MyResources.MyResource> Localizer
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4 d-flex justify-content-between">
+            @* SOL TARAFTA BOŞLUK VEYA BAŞLIK *@
+            <div>
+                <span class="fw-bold text-primary">Üretim Takip Sistemi</span>
+            </div>
+
+            @* SAĞ TARAFTA: DİL BUTONLARI VE KULLANICI MENÜSÜ *@
+            <div class="d-flex align-items-center gap-3">
+
+                @* --- DİL DEĞİŞTİRME --- *@
+                <div class="btn-group btn-group-sm">
+                    <button class="btn @(mevcutDil == "tr" ? "btn-primary" : "btn-outline-primary")"
+                            @onclick='() => DilDegistir("tr")'>
+                        TR
+                    </button>
+                    <button class="btn @(mevcutDil == "en" ? "btn-primary" : "btn-outline-primary")"
+                            @onclick='() => DilDegistir("en")'>
+                        EN
+                    </button>
+                </div>
+
+                <AuthorizeView>
+                    <Authorized>
+                        <div class="dropdown">
+                            <button class="btn btn-link dropdown-toggle text-dark text-decoration-none fw-bold" type="button" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-person-circle me-1"></i> @context.User.Identity.Name
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="userMenu">
+                                <li>
+                                    <button class="dropdown-item text-danger" @onclick="Logout">
+                                        <i class="bi bi-box-arrow-right me-2"></i> Çıkış Yap
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                    </Authorized>
+                    <NotAuthorized>
+                        <a href="/login" class="btn btn-sm btn-outline-secondary">Giriş Yap</a>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </div>
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+@code {
+    private string mevcutDil = "tr";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var culture = System.Globalization.CultureInfo.CurrentCulture.Name;
+        mevcutDil = culture.StartsWith("en") ? "en" : "tr";
+    }
+
+    private async Task DilDegistir(string dilKodu)
+    {
+        await Localizer.SetCulture(dilKodu);
+        NavManager.NavigateTo(NavManager.Uri, forceLoad: true);
+    }
+
+    private async Task Logout()
+    {
+        if (AuthStateProvider is CustomAuthStateProvider customAuth)
+        {
+            await customAuth.UpdateAuthenticationState(null);
+            NavManager.NavigateTo("/login", true);
+        }
+    }
+}

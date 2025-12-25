@@ -1,0 +1,181 @@
+﻿@page "/Operasyon/urun-yonetimi"
+@using SAT242516033.Models.Providers
+@using SAT242516033.Models.MyDbModels
+@using SAT242516033.Data
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+@inject IMyDbModel_Provider DbProvider
+@inject IJSRuntime JSRuntime
+
+<div class="container mt-4">
+    <h3>Ürün Yönetimi</h3>
+
+    @if (urunler == null)
+    {
+        <div class="spinner-border text-primary"></div>
+    }
+    else
+    {
+        <button class="btn btn-success mb-3" @onclick="YeniEkle">
+            <i class="bi bi-box-seam"></i> Yeni Ürün
+        </button>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Ürün Adı</th>
+                        <th>Kategori</th>
+                        <th>Fiyat</th>
+                        <th>Stok</th>
+                        <th>Durum</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var u in urunler)
+                    {
+                        <tr>
+                            <td>@u.UrunId</td>
+                            <td>@u.UrunAdi</td>
+                            <td><span class="badge bg-info text-dark">@u.KategoriAdi</span></td>
+                            <td>@u.BirimFiyat.ToString("C2")</td>
+                            <td><span class="badge @(u.StokAdet < 10 ? "bg-danger" : "bg-success")">@u.StokAdet</span></td>
+                            <td>@(u.AktifMi ? "Aktif" : "Pasif")</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-warning" @onclick="() => Duzenle(u)">Düzenle</button>
+                                    <button class="btn btn-danger" @onclick="() => Sil(u)">Sil</button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@if (gosterModal)
+{
+    <div class="modal fade show d-block" style="background: rgba(0,0,0,0.5)">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(aktifUrun.UrunId == 0 ? "Yeni Ürün" : "Ürün Düzenle")</h5>
+                    <button type="button" class="btn-close" @onclick="Kapat"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label>Ürün Adı</label>
+                        <input class="form-control" @bind="aktifUrun.UrunAdi" />
+                    </div>
+                    <div class="mb-3">
+                        <label>Kategori</label>
+                        <select class="form-select" @bind="aktifUrun.KategoriId">
+                            <option value="">- Seçiniz -</option>
+                            @foreach (var k in kategoriler)
+                            {
+                                <option value="@k.KategoriId">@k.KategoriAdi</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label>Fiyat</label>
+                            <input type="number" class="form-control" @bind="aktifUrun.BirimFiyat" />
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label>Stok</label>
+                            <input type="number" class="form-control" @bind="aktifUrun.StokAdet" />
+                        </div>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" @bind="aktifUrun.AktifMi" id="chk" />
+                        <label class="form-check-label" for="chk">Satışa Açık</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="Kapat">İptal</button>
+                    <button class="btn btn-primary" @onclick="Kaydet">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Urun> urunler;
+    private List<Kategori> kategoriler = new List<Kategori>();
+    private Urun aktifUrun = new Urun();
+    private bool gosterModal = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await VerileriYukle();
+    }
+
+    private async Task VerileriYukle()
+    {
+        // YENİ HALİ
+        var uRes = await DbProvider.Execute<Urun>("sp_UrunListele");
+        urunler = uRes?.Items?.ToList() ?? new List<Urun>();
+
+        var kRes = await DbProvider.Execute<Kategori>("sp_Kategoriler");
+        kategoriler = kRes?.Items?.ToList() ?? new List<Kategori>();
+    }
+
+    private void YeniEkle()
+    {
+        aktifUrun = new Urun { AktifMi = true };
+        gosterModal = true;
+    }
+
+    private void Duzenle(Urun u)
+    {
+        aktifUrun = new Urun
+        {
+            UrunId = u.UrunId,
+            UrunAdi = u.UrunAdi,
+            KategoriId = u.KategoriId,
+            BirimFiyat = u.BirimFiyat,
+            StokAdet = u.StokAdet,
+            AktifMi = u.AktifMi
+        };
+        gosterModal = true;
+    }
+
+    private async Task Kaydet()
+    {
+        int islemTuru = aktifUrun.UrunId == 0 ? 1 : 2;
+
+        // DÜZELTİLDİ: new MyDbModel<Urun>() ve false silindi.
+        await DbProvider.Execute<Urun>("sp_Urun_Add_Update_Remove",
+            ("IslemTuru", islemTuru),
+            ("UrunId", aktifUrun.UrunId),
+            ("UrunAdi", aktifUrun.UrunAdi),
+            ("KategoriId", aktifUrun.KategoriId),
+            ("BirimFiyat", aktifUrun.BirimFiyat),
+            ("StokAdet", aktifUrun.StokAdet),
+            ("AktifMi", aktifUrun.AktifMi)
+        );
+        gosterModal = false;
+        await VerileriYukle();
+    }
+
+    private async Task Sil(Urun u)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Silinsin mi?")) return;
+
+        // DÜZELTİLDİ: new MyDbModel<Urun>() ve false silindi.
+        await DbProvider.Execute<Urun>("sp_Urun_Add_Update_Remove",
+            ("IslemTuru", 3),
+            ("UrunId", u.UrunId)
+        );
+        await VerileriYukle();
+    }
+
+    private void Kapat() => gosterModal = false;
+}

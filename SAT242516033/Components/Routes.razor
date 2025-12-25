@@ -1,0 +1,31 @@
+﻿@using SAT242516033.Components.Layout
+@using Microsoft.AspNetCore.Components.Authorization
+
+@* İŞTE BU ETİKET EKSİK OLDUĞU İÇİN ATIYOR SENİ *@
+<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(Program).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                <NotAuthorized>
+                    @if (context.User.Identity?.IsAuthenticated != true)
+                    {
+                        <RedirectToLogin />
+                    }
+                    else
+                    {
+                        <div class="p-4 text-center">
+                            <h3>⛔ Yetkisiz Erişim</h3>
+                            <a href="/" class="btn btn-primary">Ana Sayfaya Dön</a>
+                        </div>
+                    }
+                </NotAuthorized>
+            </AuthorizeRouteView>
+        </Found>
+        <NotFound>
+            <PageTitle>Sayfa Bulunamadı</PageTitle>
+            <LayoutView Layout="@typeof(MainLayout)">
+                <div class="p-4 text-center"><h3>🔍 Sayfa Yok</h3></div>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>

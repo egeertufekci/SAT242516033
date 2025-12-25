@@ -1,0 +1,144 @@
+﻿@implements IDisposable
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using SAT242516033.Models.Providers
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">SAT242516033</a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="flex-column">
+
+        @* --- GENEL --- *@
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Ana Sayfa
+            </NavLink>
+        </div>
+
+        <AuthorizeView>
+            <Authorized>
+
+                @* --- OPERASYON MENÜSÜ --- *@
+                <div class="nav-item px-3 mt-2">
+                    <span class="text-white-50 small text-uppercase fw-bold ps-3">Operasyon</span>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="Operasyon/musteri-yonetimi">
+                        <span class="bi bi-people-fill" aria-hidden="true"></span> Müşteri Yönetimi
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="Operasyon/urun-yonetimi">
+                        <span class="bi bi-box-seam-fill" aria-hidden="true"></span> Ürün Yönetimi
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="Operasyon/siparis-yonetimi">
+                        <span class="bi bi-cart-check-fill" aria-hidden="true"></span> Sipariş Yönetimi
+                    </NavLink>
+                </div>
+
+                @* --- ADMİN / YÖNETİM --- *@
+                <div class="nav-item px-3 mt-2">
+                    <span class="text-white-50 small text-uppercase fw-bold ps-3">Yönetim Paneli</span>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="Yonetim/kullanici-yonetimi">
+                        <span class="bi bi-person-badge-fill" aria-hidden="true"></span> Kullanıcılar
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="Yonetim/rol-yonetimi">
+                        <span class="bi bi-shield-lock-fill" aria-hidden="true"></span> Roller
+                    </NavLink>
+                </div>
+
+                @* --- RAPORLAR & LOGLAR --- *@
+                <div class="nav-item px-3 mt-2">
+                    <span class="text-white-50 small text-uppercase fw-bold ps-3">Raporlar</span>
+                </div>
+
+                @* YANLIŞ: href="logs-1" *@
+                @* DOĞRU: *@
+                <NavLink class="nav-link" href="Yonetim/logs">
+                    <span class="bi bi-journal-text" aria-hidden="true"></span> Sistem Logları
+                </NavLink>
+
+                @* İSTATİSTİKLER İÇİN *@
+                <NavLink class="nav-link" href="stats">
+                    <span class="bi bi-bar-chart-line-fill" aria-hidden="true"></span> İstatistikler
+                </NavLink>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="Raporlar/pdf-olustur">
+                        <span class="bi bi-file-earmark-pdf-fill" aria-hidden="true"></span> PDF Rapor
+                    </NavLink>
+                </div>
+
+                <div class="dropdown-divider my-2 border-secondary"></div>
+
+                @* --- ÇIKIŞ --- *@
+                <div class="nav-item px-3">
+                    <button class="nav-link btn btn-link text-white w-100 text-start" @onclick="Logout">
+                        <span class="bi bi-box-arrow-left" aria-hidden="true"></span> Çıkış Yap
+                    </button>
+                </div>
+
+            </Authorized>
+
+            <NotAuthorized>
+                @* Giriş yapmamışsa sadece Login görünsün *@
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="login">
+                        <span class="bi bi-box-arrow-in-right" aria-hidden="true"></span> Giriş Yap
+                    </NavLink>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
+
+    </nav>
+</div>
+
+@code {
+    private string? currentUrl;
+    protected override void OnInitialized()
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+
+    private async Task Logout()
+    {
+        // CustomAuthStateProvider ismini kontrol et, senin projende neyse o olmalı.
+        // Genelde Cast işlemi gerekir
+        if (AuthStateProvider is SAT242516033.Models.MyServices.CustomAuthStateProvider customAuth)
+        {
+            await customAuth.UpdateAuthenticationState(null);
+            NavigationManager.NavigateTo("/login", true);
+        }
+    }
+}

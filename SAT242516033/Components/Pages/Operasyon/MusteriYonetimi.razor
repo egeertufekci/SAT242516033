@@ -1,0 +1,173 @@
+﻿@page "/Operasyon/musteri-yonetimi"
+@using SAT242516033.Models.Providers
+@using SAT242516033.Models.MyDbModels
+@using SAT242516033.Data
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+@inject IMyDbModel_Provider DbProvider
+@inject IJSRuntime JSRuntime
+
+<div class="container mt-4">
+    <h3>Müşteri Yönetimi</h3>
+
+    @if (musteriler == null)
+    {
+        <div class="spinner-border text-primary"></div>
+    }
+    else
+    {
+        <button class="btn btn-primary mb-3" @onclick="YeniEkle">
+            <i class="bi bi-plus-lg"></i> Yeni Müşteri
+        </button>
+
+        <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Ad Soyad</th>
+                        <th>Email</th>
+                        <th>Telefon</th>
+                        <th>Adres</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var m in musteriler)
+                    {
+                        <tr>
+                            <td>@m.MusteriId</td>
+                            <td>@m.AdSoyad</td>
+                            <td>@m.Email</td>
+                            <td>@m.Telefon</td>
+                            <td><small>@m.Adres</small></td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-warning" @onclick="() => Duzenle(m)">Düzenle</button>
+                                    <button class="btn btn-danger" @onclick="() => Sil(m)">Sil</button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@if (gosterModal)
+{
+    <div class="modal fade show d-block" style="background: rgba(0,0,0,0.5)">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(aktifMusteri.MusteriId == 0 ? "Yeni Müşteri" : "Müşteri Düzenle")</h5>
+                    <button type="button" class="btn-close" @onclick="Kapat"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-6 mb-2">
+                            <label>Ad</label>
+                            <input class="form-control" @bind="aktifMusteri.Ad" />
+                        </div>
+                        <div class="col-6 mb-2">
+                            <label>Soyad</label>
+                            <input class="form-control" @bind="aktifMusteri.Soyad" />
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label>Email</label>
+                        <input class="form-control" @bind="aktifMusteri.Email" />
+                    </div>
+                    <div class="mb-2">
+                        <label>Telefon</label>
+                        <input class="form-control" @bind="aktifMusteri.Telefon" />
+                    </div>
+                    <div class="mb-2">
+                        <label>Adres</label>
+                        <textarea class="form-control" rows="2" @bind="aktifMusteri.Adres"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="Kapat">İptal</button>
+                    <button class="btn btn-primary" @onclick="Kaydet">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Musteri> musteriler;
+    private Musteri aktifMusteri = new Musteri();
+    private bool gosterModal = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await VerileriYukle();
+    }
+
+    private async Task VerileriYukle()
+    {
+        // YENİ HALİ
+        var mRes = await DbProvider.Execute<Musteri>("sp_Musteriler");
+        musteriler = mRes?.Items?.ToList() ?? new List<Musteri>();
+    }
+
+    private void YeniEkle()
+    {
+        aktifMusteri = new Musteri();
+        gosterModal = true;
+    }
+
+    private void Duzenle(Musteri m)
+    {
+        aktifMusteri = new Musteri
+        {
+            MusteriId = m.MusteriId,
+            Ad = m.Ad,
+            Soyad = m.Soyad,
+            Email = m.Email, 
+            Telefon = m.Telefon,
+            Adres = m.Adres
+        };
+        gosterModal = true;
+    }
+
+    private async Task Kaydet()
+    {
+        int islemTuru = aktifMusteri.MusteriId == 0 ? 1 : 2;
+
+        // DİKKAT: Dictionary yerine params (Tuple) kullanıyoruz
+        await DbProvider.Execute<Musteri>(
+    "sp_Musteri_Add_Update_Remove",   // <--- 1. DİKKAT: SP Adı en başa geldi.
+                                      // <--- O aradaki "new MyDbModel..." ve "false" kısmını sildim.
+    ("IslemTuru", islemTuru),
+    ("MusteriId", aktifMusteri.MusteriId),
+    ("Ad", aktifMusteri.Ad),
+    ("Soyad", aktifMusteri.Soyad),
+    ("Email", aktifMusteri.Email ?? ""),
+    ("Telefon", aktifMusteri.Telefon ?? ""),
+    ("Adres", aktifMusteri.Adres ?? "")
+);
+
+        gosterModal = false;
+        await VerileriYukle();
+    }
+
+    private async Task Sil(Musteri m)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Silmek istediğine emin misin?")) return;
+
+        // Silme işlemi için de Tuple kullanıyoruz
+        await DbProvider.Execute<Musteri>("sp_Musteri_Add_Update_Remove",
+    ("IslemTuru", 3),
+    ("MusteriId", m.MusteriId)
+);
+
+        await VerileriYukle();
+    }
+
+    private void Kapat() => gosterModal = false;
+}
