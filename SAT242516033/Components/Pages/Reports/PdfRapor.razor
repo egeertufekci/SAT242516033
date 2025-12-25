@@ -31,7 +31,7 @@
     protected override async Task OnInitializedAsync()
     {
         // 1. Verileri Çek
-        var sSonuc = await DbProvider.Execute(new MyDbModel<Siparis>(), "sp_Siparisler", true);
+        var sSonuc = await DbProvider.Execute<Siparis>("sp_Siparisler");
         var siparisler = sSonuc?.Items?.ToList() ?? new List<Siparis>();
 
         // 2. PDF Byte Dizisini Oluştur

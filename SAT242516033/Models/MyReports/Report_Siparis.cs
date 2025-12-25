@@ -42,9 +42,9 @@ namespace SAT242516033.Models.MyReports
                     foreach (var s in _siparisler)
                     {
                         table.Cell().Element(CellStyle).Text(s.SiparisId.ToString());
-                        table.Cell().Element(CellStyle).Text(s.MusteriId.ToString());
-                        table.Cell().Element(CellStyle).Text(s.Durum);
-                        table.Cell().Element(CellStyle).Text(s.SiparisTarihi.ToShortDateString());
+                        table.Cell().Element(CellStyle).Text(s.MusteriId?.ToString() ?? "-");
+                        table.Cell().Element(CellStyle).Text(string.IsNullOrWhiteSpace(s.Durum) ? "-" : s.Durum);
+                        table.Cell().Element(CellStyle).Text(s.SiparisTarihi?.ToShortDateString() ?? "-");
                     }
                 });
 
