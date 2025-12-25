@@ -1,9 +1,8 @@
 ﻿@page "/logs"
-@inject DbLogService Service
-@using SAT242516033.Models.DbContexts
-@using SAT242516033.Data
+@inject SAT242516033.Logging.LogService LogService
+@using SAT242516033.Logging
 
-<h3>Sistem Logları (Son 100)</h3>
+<h3>Sistem Logları (Dosya)</h3>
 
 @if (LogListesi == null)
 {
@@ -18,24 +17,22 @@ else
     <table class="table table-sm table-hover">
         <thead>
             <tr>
-                <th>ID</th>
-                <th>Kullanıcı</th>
-                <th>İşlem</th>
                 <th>Tarih</th>
-                <th>Açıklama</th>
+                <th>Seviye</th>
+                <th>Kategori</th>
+                <th>Mesaj</th>
+                <th>Kaynak</th>
             </tr>
         </thead>
         <tbody>
             @foreach (var log in LogListesi)
             {
                 <tr>
-                    <td>@log.LogId</td>
-                    <td>@log.TableName</td>
-                    <td>@log.Operation</td>
-                    <td>@log.KeyInfo</td>
-                    <td>@log.JsonData</td>
-                    <td>@log.UserName</td>
-                    <td>@log.CreatedAt</td>
+                    <td>@log.Timestamp.ToString("g")</td>
+                    <td>@log.Level</td>
+                    <td>@log.Category</td>
+                    <td>@log.Message</td>
+                    <td>@log.Source</td>
                 </tr>
             }
         </tbody>
@@ -43,11 +40,10 @@ else
 }
 
 @code {
-    // Logs_Table sınıfını using ile eklemeyi unutma
-    private List<Logs_Table> LogListesi;
+    private List<LogEntry> LogListesi;
 
     protected override async Task OnInitializedAsync()
     {
-        LogListesi = await Service.GetLogsAsync();
+        LogListesi = await LogService.GetFileLogsAsync();
     }
 }

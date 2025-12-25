@@ -1,11 +1,9 @@
-﻿using Microsoft.Data.SqlClient;
-using System.Data;
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace SAT242516033.Logging;
 
-public class LogService(string filePath, Func<IDbConnection> connectionFactory)
+public class LogService(string filePath)
 {
     // Dosyadan Logları Oku
     public async Task<List<LogEntry>> GetFileLogsAsync()
@@ -35,36 +33,5 @@ public class LogService(string filePath, Func<IDbConnection> connectionFactory)
         return logs;
     }
 
-    // Veritabanından Logları Oku
-    public async Task<List<LogEntry>> GetDbLogsAsync()
-    {
-        var logs = new List<LogEntry>();
-        try
-        {
-            await using var connection = (SqlConnection)connectionFactory();
-            if (connection.State != ConnectionState.Open) await connection.OpenAsync();
-
-            var command = connection.CreateCommand();
-            command.CommandText = "SELECT Timestamp, Level, Category, Message, Exception FROM Logs ORDER BY Timestamp DESC";
-
-            await using var reader = await command.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
-            {
-                logs.Add(new LogEntry
-                {
-                    Timestamp = reader.GetDateTime(0),
-                    Level = reader.GetString(1),
-                    Category = reader.IsDBNull(2) ? null : reader.GetString(2),
-                    Message = reader.IsDBNull(3) ? null : reader.GetString(3),
-                    Exception = reader.IsDBNull(4) ? null : reader.GetString(4),
-                    Source = "Database"
-                });
-            }
-        }
-        catch (Exception ex)
-        {
-            logs.Add(new LogEntry { Timestamp = DateTime.UtcNow, Level = "Error", Message = $"DB Hatası: {ex.Message}", Source = "System" });
-        }
-        return logs;
-    }
+    // Veritabanı logları bu projede kullanılmıyor.
 }

@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Configuration;
 using SAT242516033.Data;
 using System.Data;
-using System.Data.SqlClient;
 using System.Threading.Tasks;
 
 namespace SAT242516033.Models.MyServices
@@ -25,9 +24,9 @@ namespace SAT242516033.Models.MyServices
                 // Eğer Hash kullanıyorsan burayı güncellememiz gerekir.
 
                 string sql = @"
-                    SELECT k.KullaniciID, k.KullaniciAdi, k.RolID, r.RolAdi 
+                    SELECT k.KullaniciId, k.KullaniciAdi, k.AdSoyad, k.RolId, r.RolAdi 
                     FROM Kullanici k
-                    JOIN Rol r ON k.RolID = r.RolID
+                    LEFT JOIN Rol r ON k.RolId = r.RolId
                     WHERE k.KullaniciAdi = @kadi AND k.SifreHash = @sifre";
 
                 var cmd = new SqlCommand(sql, conn);
@@ -40,14 +39,18 @@ namespace SAT242516033.Models.MyServices
                 {
                     if (await reader.ReadAsync())
                     {
+                        var rolIdIndex = reader.GetOrdinal("RolId");
+                        var rolAdiIndex = reader.GetOrdinal("RolAdi");
+
                         return new Kullanici
                         {
-                            KullaniciID = (int)reader["KullaniciID"],
+                            KullaniciId = reader.GetInt32(reader.GetOrdinal("KullaniciId")),
                             KullaniciAdi = reader["KullaniciAdi"].ToString(),
+                            AdSoyad = reader["AdSoyad"] == DBNull.Value ? null : reader["AdSoyad"].ToString(),
 
                             // Rol nesnesi açmıyoruz, direkt değerleri basıyoruz
-                            RolID = (int)reader["RolID"],
-                            RolAdi = reader["RolAdi"].ToString()
+                            RolId = reader.IsDBNull(rolIdIndex) ? null : reader.GetInt32(rolIdIndex),
+                            RolAdi = reader.IsDBNull(rolAdiIndex) ? null : reader.GetString(rolAdiIndex)
                         };
                     }
                 }

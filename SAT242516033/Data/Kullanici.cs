@@ -3,18 +3,24 @@ namespace SAT242516033.Data
 {
     public class Kullanici
     {
+        [System.ComponentModel.DataAnnotations.Key]
         [SAT242516033.Models.Attributes.Sortable(true)]
         [SAT242516033.Models.Attributes.Editable(false)]
         [SAT242516033.Models.Attributes.Viewable(true)]
         [SAT242516033.Models.Attributes.LocalizedDescription("ID", typeof(Loc))]
-        public int KullaniciID { get; set; }
+        public int KullaniciId { get; set; }
 
-        [Required(ErrorMessage = "Kullanıcı adı zorunludur.")]
+        [SAT242516033.Models.Attributes.Sortable(true)]
+        [SAT242516033.Models.Attributes.Editable(true)]
+        [SAT242516033.Models.Attributes.Viewable(true)]
+        [SAT242516033.Models.Attributes.LocalizedDescription("Ad Soyad", typeof(Loc))]
+        public string? AdSoyad { get; set; }
+
         [SAT242516033.Models.Attributes.Sortable(true)]
         [SAT242516033.Models.Attributes.Editable(true)]
         [SAT242516033.Models.Attributes.Viewable(true)]
         [SAT242516033.Models.Attributes.LocalizedDescription("Kullanıcı Adı", typeof(Loc))]
-        public string KullaniciAdi { get; set; }
+        public string? KullaniciAdi { get; set; }
 
         // Şifreyi Grid'de göstermiyoruz (Viewable=false)
         [SAT242516033.Models.Attributes.Sortable(false)]
@@ -22,17 +28,23 @@ namespace SAT242516033.Data
         [SAT242516033.Models.Attributes.Viewable(false)]
         public string? SifreHash { get; set; }
 
-        [Required(ErrorMessage = "Rol seçimi zorunludur.")]
         [SAT242516033.Models.Attributes.Sortable(false)]
         [SAT242516033.Models.Attributes.Editable(true)]
         [SAT242516033.Models.Attributes.Viewable(false)]
-        public int RolID { get; set; }
+        public int? RolId { get; set; }
 
         // Listede Rol Adını göstermek için
         [SAT242516033.Models.Attributes.Sortable(true)]
         [SAT242516033.Models.Attributes.Editable(false)]
         [SAT242516033.Models.Attributes.Viewable(true)]
         [SAT242516033.Models.Attributes.LocalizedDescription("Rol", typeof(Loc))]
+        [System.ComponentModel.DataAnnotations.Schema.NotMapped]
         public string? RolAdi { get; set; }
+
+        [SAT242516033.Models.Attributes.Sortable(true)]
+        [SAT242516033.Models.Attributes.Editable(false)]
+        [SAT242516033.Models.Attributes.Viewable(true)]
+        [SAT242516033.Models.Attributes.LocalizedDescription("Kayıt Tarihi", typeof(Loc))]
+        public DateTime? KayitTarihi { get; set; }
     }
 }

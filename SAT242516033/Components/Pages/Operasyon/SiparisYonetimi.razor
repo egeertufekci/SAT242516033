@@ -41,8 +41,8 @@
                         <tr>
                             <td>@s.SiparisId</td>
                             <td>@musteriAdi</td>
-                            <td>@s.SiparisTarihi.ToShortDateString()</td>
-                            <td>@s.Durum</td>
+                            <td>@(s.SiparisTarihi.HasValue ? s.SiparisTarihi.Value.ToShortDateString() : "-")</td>
+                            <td>@(string.IsNullOrWhiteSpace(s.Durum) ? "-" : s.Durum)</td>
                             <td>
                                 <div class="btn-group btn-group-sm">
                                     <button class="btn btn-primary" @onclick="() => Duzenle(s)">Güncelle</button>
@@ -70,7 +70,7 @@
                     <div class="mb-3">
                         <label>Müşteri</label>
                         <select class="form-select" @bind="aktifSiparis.MusteriId">
-                            <option value="0">- Seçiniz -</option>
+                            <option value="">- Seçiniz -</option>
                             @foreach (var m in musteriler)
                             {
                                 <option value="@m.MusteriId">@m.AdSoyad</option>
@@ -129,13 +129,23 @@
 
     private void Duzenle(Siparis s)
     {
-        aktifSiparis = new Siparis { SiparisId = s.SiparisId, MusteriId = s.MusteriId, Durum = s.Durum, UserId = s.UserId };
+        aktifSiparis = new Siparis
+        {
+            SiparisId = s.SiparisId,
+            MusteriId = s.MusteriId,
+            Durum = s.Durum,
+            UserId = s.UserId
+        };
         gosterModal = true;
     }
 
     private async Task Kaydet()
     {
-        if (aktifSiparis.MusteriId == 0) { await JSRuntime.InvokeVoidAsync("alert", "Müşteri Seç!"); return; }
+        if (!aktifSiparis.MusteriId.HasValue || aktifSiparis.MusteriId.Value == 0)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Müşteri Seç!");
+            return;
+        }
 
         int islemTuru = aktifSiparis.SiparisId == 0 ? 1 : 2;
 
@@ -144,7 +154,7 @@
             ("IslemTuru", islemTuru),
             ("SiparisId", aktifSiparis.SiparisId),
             ("MusteriId", aktifSiparis.MusteriId),
-            ("Durum", aktifSiparis.Durum),
+            ("Durum", aktifSiparis.Durum ?? string.Empty),
             ("UserId", userId)
         );
         gosterModal = false;

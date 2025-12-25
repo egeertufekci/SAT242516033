@@ -76,13 +76,13 @@
         }
 
         // VERİLERİ ÇEK
-        var mSonuc = await DbProvider.Execute(new MyDbModel<Musteri>(), "sp_Musteriler", true);
+        var mSonuc = await DbProvider.Execute<Musteri>("sp_Musteriler");
         if (mSonuc?.Items != null) musteriSayisi = mSonuc.Items.Count();
 
-        var uSonuc = await DbProvider.Execute(new MyDbModel<Urun>(), "sp_UrunListele", true);
+        var uSonuc = await DbProvider.Execute<Urun>("sp_UrunListele");
         if (uSonuc?.Items != null) urunSayisi = uSonuc.Items.Count();
 
-        var sSonuc = await DbProvider.Execute(new MyDbModel<Siparis>(), "sp_Siparisler", true);
+        var sSonuc = await DbProvider.Execute<Siparis>("sp_Siparisler");
         if (sSonuc?.Items != null) siparisSayisi = sSonuc.Items.Count();
     }
 }

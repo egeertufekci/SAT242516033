@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using SAT242516033.Models.Attributes;
 
 namespace SAT242516033.Data
@@ -11,11 +12,10 @@ namespace SAT242516033.Data
         [LocalizedDescription("ID", typeof(SAT242516033.Loc))]
         public int UrunId { get; set; }
 
-        [Required(ErrorMessage = "Ürün adı giriniz.")]
         [Sortable(true)]
         [Viewable(true)]
         [LocalizedDescription("Ürün Adı", typeof(SAT242516033.Loc))]
-        public string UrunAdi { get; set; }
+        public string? UrunAdi { get; set; }
 
         // Veritabanında ilişki için ID tutuyoruz
         [Sortable(true)]
@@ -26,22 +26,21 @@ namespace SAT242516033.Data
         [Sortable(true)]
         [Viewable(true)]
         [LocalizedDescription("Kategori", typeof(SAT242516033.Loc))]
+        [NotMapped]
         public string? KategoriAdi { get; set; }
 
-        [Required]
         [Sortable(true)]
         [Viewable(true)]
         [LocalizedDescription("Fiyat", typeof(SAT242516033.Loc))]
-        public decimal BirimFiyat { get; set; }
+        public decimal? BirimFiyat { get; set; }
 
-        [Required]
         [Sortable(true)]
         [Viewable(true)]
         [LocalizedDescription("Stok", typeof(SAT242516033.Loc))]
-        public int StokAdet { get; set; }
+        public int? StokAdet { get; set; }
 
         [Viewable(true)]
         [LocalizedDescription("Aktif", typeof(SAT242516033.Loc))]
-        public bool AktifMi { get; set; } = true;
+        public bool? AktifMi { get; set; } = true;
     }
 }
