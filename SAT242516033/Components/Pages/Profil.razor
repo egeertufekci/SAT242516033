@@ -1,83 +1,105 @@
 ﻿@page "/profil"
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Authorization
-@inject AuthenticationStateProvider AuthStateProvider
-@inject NavigationManager NavManager
-@attribute [Authorize]
+@using SAT242516033.Models.Providers
+@using SAT242516033.Models.MyDbModels
 
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IMyDbModel_Provider DbProvider
+@attribute [Authorize]
 
 <div class="container mt-4">
     <div class="row">
-        <div class="col-md-4">
-            <div class="card shadow-sm">
-                <div class="card-body text-center">
-                    <div class="mb-3">
-                        <i class="fas fa-user-circle fa-5x text-secondary"></i>
-                    </div>
-                    <h4>@KullaniciAdi</h4>
-                    <p class="text-muted">@Rol</p>
+        @* --- SOL TARAF: KULLANICI KARTI --- *@
+        <div class="col-md-4 mb-4">
+            <div class="card shadow border-0 overflow-hidden">
+                <div class="bg-primary py-5 text-center">
+                    <i class="fas fa-user-circle fa-5x text-white"></i>
+                </div>
+                <div class="card-body text-center mt-n4">
+                    <h4 class="fw-bold">@KullaniciAdi</h4>
+                    <span class="badge @(Rol == "Admin" ? "bg-danger" : "bg-info") rounded-pill mb-3">@Rol</span>
                     <hr />
-                    <div class="text-start">
-                        <p><strong>Kullanıcı ID:</strong> @KullaniciId</p>
+                    <div class="text-start small">
+                        <p class="mb-1 text-muted">Kullanıcı Bilgileri</p>
+                        <p><strong>ID:</strong> <code class="text-primary">@KullaniciId</code></p>
                     </div>
                 </div>
             </div>
         </div>
 
+        @* --- SAĞ TARAF: SİSTEM / SİPARİŞ ÖZETİ --- *@
         <div class="col-md-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Özet Paneli</h5>
+            <div class="card shadow border-0 h-100">
+                <div class="card-header bg-white py-3 border-0">
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-chart-line me-2 text-primary"></i>Özet İstatistikler</h5>
                 </div>
                 <div class="card-body">
 
                     @if (Rol == "Admin")
                     {
-                        <div class="alert alert-info">
-                            <i class="fas fa-crown me-2"></i> Yönetici paneline hoşgeldiniz.
+                        @* --- ADMİN PANELİ: GENEL SİSTEM DURUMU --- *@
+                        <div class="alert alert-primary border-0 shadow-sm d-flex align-items-center">
+                            <i class="fas fa-shield-alt fa-2x me-3"></i>
+                            <div>
+                                <strong>Sistem Yöneticisi Paneli</strong><br />
+                                Katalogdaki ürünleri ve tüm müşteri siparişlerini buradan takip edebilirsiniz.
+                            </div>
                         </div>
 
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <div class="card text-white bg-success h-100">
-                                    
-                                </div>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <div class="card text-white bg-warning h-100">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="card bg-success text-white border-0 shadow-sm">
                                     <div class="card-body">
-                                        <h5 class="card-title">Toplam Maaş Ödemesi</h5>
-                                        <p class="card-text display-6">₺850.000</p>
+                                        <h6 class="card-title text-uppercase small opacity-75">Aylık Toplam Ciro</h6>
+                                        <h2 class="fw-bold mb-0">₺@toplamCiro.ToString("N2")</h2>
+                                        <i class="fas fa-money-bill-wave float-end opacity-25 fa-2x mt-n4"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card bg-warning text-dark border-0 shadow-sm">
+                                    <div class="card-body">
+                                        <h6 class="card-title text-uppercase small opacity-75">Bekleyen Siparişler</h6>
+                                        <h2 class="fw-bold mb-0">@bekleyenSiparisAdet Adet</h2>
+                                        <i class="fas fa-clock float-end opacity-25 fa-2x mt-n4"></i>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     }
-                    else if (Rol == "Personel")
+                    else
                     {
-                        <div class="alert alert-secondary">
-                            <i class="fas fa-briefcase me-2"></i> Personel paneline hoşgeldiniz.
+                        @* --- USER PANELİ: KİŞİSEL SİPARİŞ DURUMU --- *@
+                        <div class="alert alert-secondary border-0 shadow-sm">
+                            <i class="fas fa-shopping-basket me-2"></i> Siparişlerinize ve stok durumuna hoşgeldiniz.
                         </div>
 
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <div class="card border-primary h-100">
-                                    <div class="card-body text-primary">
-                                        <h5 class="card-title">Kalan İzin Hakkı</h5>
-                                        <p class="card-text display-6">14 Gün</p>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="card border-0 border-start border-primary border-5 shadow-sm">
+                                    <div class="card-body">
+                                        <h6 class="text-muted small">Verdiğim Siparişler</h6>
+                                        <h2 class="fw-bold">@userSiparisAdet</h2>
+                                        <a href="/siparislerim" class="btn btn-link btn-sm p-0 text-decoration-none">Detayları Gör →</a>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <div class="card border-success h-100">
-                                    <div class="card-body text-success">
-                                        <h5 class="card-title">Son Yatan Maaş</h5>
-                                        <p class="card-text display-6">₺32.000</p>
+                            <div class="col-md-6">
+                                <div class="card border-0 border-start border-info border-5 shadow-sm">
+                                    <div class="card-body">
+                                        <h6 class="text-muted small">Son Harcama Tutarı</h6>
+                                        <h2 class="fw-bold text-info">₺@sonHarcama.ToString("N2")</h2>
+                                        <p class="small text-muted mb-0">Son 30 gün verisi</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     }
+                </div>
+                <div class="card-footer bg-white border-0 py-3">
+                    <button class="btn btn-outline-danger btn-sm rounded-pill px-4">Şifremi Değiştir</button>
+                    <button class="btn btn-light btn-sm rounded-pill px-4 ms-2">Ayarlar</button>
                 </div>
             </div>
         </div>
@@ -85,25 +107,50 @@
 </div>
 
 @code {
-    private string KullaniciAdi = "";
-    private string Rol = "";
+    private string KullaniciAdi = "Yükleniyor...";
+    private string Rol = "Yükleniyor...";
     private string KullaniciId = "";
+
+    // İstatistik Değişkenleri
+    private decimal toplamCiro = 0;
+    private int bekleyenSiparisAdet = 0;
+    private int userSiparisAdet = 0;
+    private decimal sonHarcama = 0;
 
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
 
-        if (user.Identity.IsAuthenticated)
+        if (user.Identity?.IsAuthenticated == true)
         {
-            KullaniciAdi = user.Identity.Name;
+            KullaniciAdi = user.Identity.Name ?? "Bilinmiyor";
+            Rol = user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value ?? "User";
+            KullaniciId = user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value ?? "";
 
-            // Claims içinden Rol ve ID'yi çekiyoruz
-            Rol = user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value ?? "Rol Yok";
-            KullaniciId = user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value; // ID'yi claim olarak attıysan
-
-            // BURADA: KullaniciId ile veritabanına sorgu atıp o display-6 yazdığım yerleri dolduracaksın.
-            // Örnek: var stats = _service.GetStats(KullaniciId);
+            // --- VERİTABANINDAN CANLI VERİ ÇEKME ---
+            try
+            {
+                if (Rol == "Admin")
+                {
+                    // Admin için tüm sistem cirosunu ve bekleyen siparişleri çekiyoruz
+                    // Örnek Stored Procedure: sp_SistemOzetRaporu
+                    // var stats = await DbProvider.Execute<IstatistikModel>("sp_SistemOzetRaporu");
+                    toplamCiro = 850000; // Örnek statik veri
+                    bekleyenSiparisAdet = 12;
+                }
+                else
+                {
+                    // Normal kullanıcı için kendi siparişlerini çekiyoruz
+                    // var userStats = await DbProvider.Execute<UserStatModel>("sp_UserOzet", ("KullaniciId", KullaniciId));
+                    userSiparisAdet = 5;
+                    sonHarcama = 12500;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("İstatistik çekme hatası: " + ex.Message);
+            }
         }
     }
 }

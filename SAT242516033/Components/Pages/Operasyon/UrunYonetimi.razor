@@ -3,6 +3,8 @@
 @using SAT242516033.Models.MyDbModels
 @using SAT242516033.Data
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.Extensions.Localization
+
 @attribute [Authorize]
 @attribute [Authorize(Roles = "Admin,User")]
 
@@ -10,71 +12,125 @@
 @inject IJSRuntime JSRuntime
 
 <div class="container mt-4">
-    <h3>Ürün Yönetimi</h3>
+    @* --- ÜST AKSİYON ÇUBUĞU --- *@
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <h3 class="m-0 text-primary fw-bold">Ürün Yönetimi</h3>
+                </div>
+                <div class="col-md-5">
+                    @* 🔍 FİLTRELEME (ARAMA) *@
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" class="form-control border-start-0"
+                               placeholder="Ürün veya kategori ara..."
+                               @bind="aramaMetni" @bind:event="oninput" @onkeyup="Filtrele" />
+                    </div>
+                </div>
+                <div class="col-md-3 text-end">
+                    <button class="btn btn-success px-4" @onclick="YeniEkle">
+                        <i class="bi bi-plus-circle-fill"></i> Yeni Ürün
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    @if (urunler == null)
+    @if (tumUrunler == null)
     {
-        <div class="spinner-border text-primary"></div>
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2 text-muted">Veriler Docker üzerinden çekiliyor...</p>
+        </div>
     }
     else
     {
-        <button class="btn btn-success mb-3" @onclick="YeniEkle">
-            <i class="bi bi-box-seam"></i> Yeni Ürün
-        </button>
-
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
+        @* --- VERİ TABLOSU --- *@
+        <div class="table-responsive shadow-sm rounded-3">
+            <table class="table table-hover align-middle bg-white m-0">
                 <thead class="table-dark">
                     <tr>
-                        <th>ID</th>
-                        <th>Ürün Adı</th>
-                        <th>Kategori</th>
-                        <th>Fiyat</th>
-                        <th>Stok</th>
+                        <th style="cursor:pointer" @onclick='() => Sırala("UrunId")' class="ps-3">ID @Sıralamaİkonu("UrunId")</th>
+                        <th style="cursor:pointer" @onclick='() => Sırala("UrunAdi")'>Ürün Adı @Sıralamaİkonu("UrunAdi")</th>
+                        <th style="cursor:pointer" @onclick='() => Sırala("KategoriAdi")'>Kategori @Sıralamaİkonu("KategoriAdi")</th>
+                        <th style="cursor:pointer" @onclick='() => Sırala("BirimFiyat")'>Fiyat @Sıralamaİkonu("BirimFiyat")</th>
+                        <th style="cursor:pointer" @onclick='() => Sırala("StokAdet")'>Stok @Sıralamaİkonu("StokAdet")</th>
                         <th>Durum</th>
-                        <th>İşlemler</th>
+                        <th class="text-center pe-3">İşlemler</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var u in urunler)
+                    @foreach (var u in gosterilenUrunler)
                     {
                         <tr>
-                            <td>@u.UrunId</td>
-                            <td>@u.UrunAdi</td>
-                            <td><span class="badge bg-info text-dark">@u.KategoriAdi</span></td>
-                            <td>@(u.BirimFiyat.HasValue ? u.BirimFiyat.Value.ToString("C2") : "-")</td>
-                            <td><span class="badge @((u.StokAdet ?? 0) < 10 ? "bg-danger" : "bg-success")">@(u.StokAdet ?? 0)</span></td>
-                            <td>@(u.AktifMi == true ? "Aktif" : "Pasif")</td>
+                            <td class="ps-3">@u.UrunId</td>
+                            <td class="fw-bold text-dark">@u.UrunAdi</td>
+                            <td><span class="badge bg-light text-dark border">@u.KategoriAdi</span></td>
+                            <td>@(u.BirimFiyat.HasValue? u.BirimFiyat.Value.ToString("C2") : "-")</td>
                             <td>
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-warning" @onclick="() => Duzenle(u)">Düzenle</button>
-                                    <button class="btn btn-danger" @onclick="() => Sil(u)">Sil</button>
-                                </div>
+                                <span class="badge @((u.StokAdet ?? 0) < 10 ? "bg-danger" : "bg-success")">
+                                    @(u.StokAdet ?? 0) Adet
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge rounded-pill @(u.AktifMi == true ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger")">
+                                    @(u.AktifMi == true ? "Aktif" : "Pasif")
+                                </span>
+                            </td>
+                            <td class="text-center pe-3">
+                                <button class="btn btn-outline-warning btn-sm me-1" @onclick="() => Duzenle(u)"><i class="bi bi-pencil"></i></button>
+                                <button class="btn btn-outline-danger btn-sm" @onclick="() => Sil(u)"><i class="bi bi-trash"></i></button>
                             </td>
                         </tr>
                     }
                 </tbody>
             </table>
         </div>
+
+        @* --- SAYFALAMA (PAGINATION) --- *@
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <div class="text-muted small">
+                Toplam <b>@toplamKayit</b> üründen <b>@((suankiSayfa - 1) * sayfaBoyutu + 1) - @(Math.Min(suankiSayfa * sayfaBoyutu, toplamKayit))</b> arası gösteriliyor.
+            </div>
+            <nav>
+                <ul class="pagination pagination-sm m-0">
+                    <li class="page-item @(suankiSayfa == 1 ? "disabled" : "")">
+                        <button class="page-link" @onclick="() => SayfaDegistir(suankiSayfa - 1)">Önceki</button>
+                    </li>
+                    @for (int i = 1; i <= toplamSayfa; i++)
+                    {
+                        var j = i;
+                        <li class="page-item @(suankiSayfa == j ? "active" : "")">
+                            <button class="page-link" @onclick="() => SayfaDegistir(j)">@j</button>
+                        </li>
+                    }
+                    <li class="page-item @(suankiSayfa == toplamSayfa ? "disabled" : "")">
+                        <button class="page-link" @onclick="() => SayfaDegistir(suankiSayfa + 1)">Sonraki</button>
+                    </li>
+                </ul>
+            </nav>
+        </div>
     }
 </div>
 
+@* --- MODAL --- *@
 @if (gosterModal)
 {
-    <div class="modal fade show d-block" style="background: rgba(0,0,0,0.5)">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">@(aktifUrun.UrunId == 0 ? "Yeni Ürün" : "Ürün Düzenle")</h5>
-                    <button type="button" class="btn-close" @onclick="Kapat"></button>
+    <div class="modal fade show d-block" style="background: rgba(0,0,0,0.5); z-index: 1050;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow-lg border-0">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold">@(aktifUrun.UrunId == 0 ? "🆕 Yeni Ürün" : "✏️ Ürün Düzenle")</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="Kapat"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body p-4">
                     <div class="mb-3">
-                        <label>Ürün Adı</label>
+                        <label class="form-label fw-bold small text-uppercase">Ürün Adı</label>
                         <input class="form-control" @bind="aktifUrun.UrunAdi" />
                     </div>
                     <div class="mb-3">
-                        <label>Kategori</label>
+                        <label class="form-label fw-bold small text-uppercase">Kategori</label>
                         <select class="form-select" @bind="aktifUrun.KategoriId">
                             <option value="">- Seçiniz -</option>
                             @foreach (var k in kategoriler)
@@ -85,22 +141,22 @@
                     </div>
                     <div class="row">
                         <div class="col-6 mb-3">
-                            <label>Fiyat</label>
-                            <input type="number" class="form-control" @bind="aktifUrun.BirimFiyat" />
+                            <label class="form-label fw-bold small text-uppercase">Birim Fiyat</label>
+                            <input type="number" class="form-control" @bind="aktifUrun.BirimFiyat" step="0.01" />
                         </div>
                         <div class="col-6 mb-3">
-                            <label>Stok</label>
+                            <label class="form-label fw-bold small text-uppercase">Stok</label>
                             <input type="number" class="form-control" @bind="aktifUrun.StokAdet" />
                         </div>
                     </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" @bind="aktifUrun.AktifMi" id="chk" />
-                        <label class="form-check-label" for="chk">Satışa Açık</label>
+                    <div class="form-check form-switch mt-2">
+                        <input class="form-check-input" type="checkbox" @bind="aktifUrun.AktifMi" id="aktifSwitch" />
+                        <label class="form-check-label" for="aktifSwitch">Satışa Açık</label>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" @onclick="Kapat">İptal</button>
-                    <button class="btn btn-primary" @onclick="Kaydet">Kaydet</button>
+                <div class="modal-footer bg-light border-0">
+                    <button class="btn btn-secondary rounded-pill px-4" @onclick="Kapat">İptal</button>
+                    <button class="btn btn-primary rounded-pill px-4" @onclick="Kaydet">Kaydet</button>
                 </div>
             </div>
         </div>
@@ -108,10 +164,20 @@
 }
 
 @code {
-    private List<Urun> urunler;
-    private List<Kategori> kategoriler = new List<Kategori>();
-    private Urun aktifUrun = new Urun();
+    private List<Urun> tumUrunler = new();
+    private List<Urun> gosterilenUrunler = new();
+    private List<Kategori> kategoriler = new();
+    private Urun aktifUrun = new();
     private bool gosterModal = false;
+
+    // Arama, Sıralama, Sayfalama
+    private string aramaMetni = "";
+    private string aktifSıralamaSutunu = "UrunId";
+    private bool artanSıralama = true;
+    private int suankiSayfa = 1;
+    private int sayfaBoyutu = 5;
+    private int toplamKayit = 0;
+    private int toplamSayfa => (int)Math.Ceiling((double)toplamKayit / sayfaBoyutu);
 
     protected override async Task OnInitializedAsync()
     {
@@ -120,63 +186,67 @@
 
     private async Task VerileriYukle()
     {
-        // YENİ HALİ
         var uRes = await DbProvider.Execute<Urun>("sp_UrunListele");
-        urunler = uRes?.Items?.ToList() ?? new List<Urun>();
+        tumUrunler = uRes?.Items?.ToList() ?? new List<Urun>();
 
         var kRes = await DbProvider.Execute<Kategori>("sp_Kategoriler");
         kategoriler = kRes?.Items?.ToList() ?? new List<Kategori>();
+
+        TabloyuYenile();
     }
 
-    private void YeniEkle()
+    private void TabloyuYenile()
     {
-        aktifUrun = new Urun { AktifMi = true };
-        gosterModal = true;
-    }
-
-    private void Duzenle(Urun u)
-    {
-        aktifUrun = new Urun
+        // 1. ADIM: FİLTRELE (DÜZELTİLDİ: Explicit Null Check)
+        var sorgu = tumUrunler.AsQueryable();
+        if (!string.IsNullOrWhiteSpace(aramaMetni))
         {
-            UrunId = u.UrunId,
-            UrunAdi = u.UrunAdi,
-            KategoriId = u.KategoriId,
-            BirimFiyat = u.BirimFiyat,
-            StokAdet = u.StokAdet,
-            AktifMi = u.AktifMi
+            sorgu = sorgu.Where(u =>
+                (u.UrunAdi != null && u.UrunAdi.Contains(aramaMetni, StringComparison.OrdinalIgnoreCase)) ||
+                (u.KategoriAdi != null && u.KategoriAdi.Contains(aramaMetni, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        // 2. ADIM: SIRALA
+        sorgu = aktifSıralamaSutunu switch
+        {
+            "UrunAdi" => artanSıralama ? sorgu.OrderBy(u => u.UrunAdi) : sorgu.OrderByDescending(u => u.UrunAdi),
+            "KategoriAdi" => artanSıralama ? sorgu.OrderBy(u => u.KategoriAdi) : sorgu.OrderByDescending(u => u.KategoriAdi),
+            "BirimFiyat" => artanSıralama ? sorgu.OrderBy(u => u.BirimFiyat) : sorgu.OrderByDescending(u => u.BirimFiyat),
+            "StokAdet" => artanSıralama ? sorgu.OrderBy(u => u.StokAdet) : sorgu.OrderByDescending(u => u.StokAdet),
+            _ => artanSıralama ? sorgu.OrderBy(u => u.UrunId) : sorgu.OrderByDescending(u => u.UrunId)
         };
-        gosterModal = true;
+
+        toplamKayit = sorgu.Count();
+
+        // 3. ADIM: SAYFALA
+        gosterilenUrunler = sorgu
+            .Skip((suankiSayfa - 1) * sayfaBoyutu)
+            .Take(sayfaBoyutu)
+            .ToList();
     }
+
+    private void Filtrele() { suankiSayfa = 1; TabloyuYenile(); }
+    private void SayfaDegistir(int yeniSayfa) { suankiSayfa = yeniSayfa; TabloyuYenile(); }
+    private void Sırala(string sutunAdı) { if (aktifSıralamaSutunu == sutunAdı) artanSıralama = !artanSıralama; else { aktifSıralamaSutunu = sutunAdı; artanSıralama = true; } TabloyuYenile(); }
+    private string Sıralamaİkonu(string sutunAdı) { if (aktifSıralamaSutunu != sutunAdı) return "↕"; return artanSıralama ? "↑" : "↓"; }
+
+    // CRUD Metodları
+    private void YeniEkle() { aktifUrun = new Urun { AktifMi = true }; gosterModal = true; }
+    private void Duzenle(Urun u) { aktifUrun = new Urun { UrunId = u.UrunId, UrunAdi = u.UrunAdi, KategoriId = u.KategoriId, BirimFiyat = u.BirimFiyat, StokAdet = u.StokAdet, AktifMi = u.AktifMi }; gosterModal = true; }
+    private void Kapat() => gosterModal = false;
 
     private async Task Kaydet()
     {
         int islemTuru = aktifUrun.UrunId == 0 ? 1 : 2;
-
-        // DÜZELTİLDİ: new MyDbModel<Urun>() ve false silindi.
-        await DbProvider.Execute<Urun>("sp_Urun_Add_Update_Remove",
-            ("IslemTuru", islemTuru),
-            ("UrunId", aktifUrun.UrunId),
-            ("UrunAdi", aktifUrun.UrunAdi),
-            ("KategoriId", aktifUrun.KategoriId),
-            ("BirimFiyat", aktifUrun.BirimFiyat),
-            ("StokAdet", aktifUrun.StokAdet),
-            ("AktifMi", aktifUrun.AktifMi ?? true)
-        );
+        await DbProvider.Execute<Urun>("sp_Urun_Add_Update_Remove", ("IslemTuru", islemTuru), ("UrunId", aktifUrun.UrunId), ("UrunAdi", aktifUrun.UrunAdi), ("KategoriId", aktifUrun.KategoriId), ("BirimFiyat", aktifUrun.BirimFiyat), ("StokAdet", aktifUrun.StokAdet), ("AktifMi", aktifUrun.AktifMi ?? true));
         gosterModal = false;
         await VerileriYukle();
     }
 
     private async Task Sil(Urun u)
     {
-        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Silinsin mi?")) return;
-
-        // DÜZELTİLDİ: new MyDbModel<Urun>() ve false silindi.
-        await DbProvider.Execute<Urun>("sp_Urun_Add_Update_Remove",
-            ("IslemTuru", 3),
-            ("UrunId", u.UrunId)
-        );
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", $"{u.UrunAdi} silinsin mi?")) return;
+        await DbProvider.Execute<Urun>("sp_Urun_Add_Update_Remove", ("IslemTuru", 3), ("UrunId", u.UrunId));
         await VerileriYukle();
     }
-
-    private void Kapat() => gosterModal = false;
 }

@@ -5,23 +5,43 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Authorization
 @using System.Security.Claims
+@using Microsoft.Extensions.Localization
 
-@* Bu Attribute için yukarıdaki Microsoft.AspNetCore.Authorization şart *@
+@* Sadece giriş yapmış kullanıcılar görebilir *@
 @attribute [Authorize]
 
+@* Enjeksiyonlar *@
 @inject IMyDbModel_Provider DbProvider
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IStringLocalizer<Loc> L
+@inject ILogger<Home> Logger
 
-<PageTitle>Ana Sayfa</PageTitle>
+<PageTitle>Ana Sayfa - Dashboard</PageTitle>
 
 <div class="container-fluid mt-4">
-    <div class="row">
-        <div class="col-12 mb-4">
+    @* ÜST BÖLÜM: Docker ve Ortam Bilgileri *@
+    <div class="alert alert-secondary shadow-sm text-center mb-4">
+        <h4 class="text-success fw-bold">Sistem Durumu</h4>
+        <div class="row">
+            <div class="col-md-6 border-end">
+                <span class="text-muted">AKTİF SİTE:</span>
+                <span class="badge bg-danger">@($"SITE: {Environment.GetEnvironmentVariable("SITE") ?? "Localhost"}")</span>
+            </div>
+            <div class="col-md-6">
+                <small class="text-muted">Bağlantı Dizini: @(Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection") ?? "Yerel Bağlantı")</small>
+            </div>
+        </div>
+    </div>
+
+    @* HOŞGELDİN MESAJI *@
+    <div class="row mb-4">
+        <div class="col-12">
             <h1 class="display-6 fw-bold text-primary">Hoşgeldin, @userName!</h1>
             <p class="text-muted">Üretim ve Sipariş Takip Sistemi Özeti</p>
         </div>
     </div>
 
+    @* İSTATİSTİK KARTLARI *@
     <div class="row">
         @* KART 1: MÜŞTERİLER *@
         <div class="col-md-4">
@@ -56,6 +76,19 @@
             </div>
         </div>
     </div>
+
+    @* ALT BÖLÜM: Localization Test *@
+    <div class="card mt-5 bg-light shadow-sm">
+        <div class="card-body text-center">
+            <h3 class="text-dark">Dil Desteği (Localization) Testi</h3>
+            <h2 class="text-danger display-5 fw-bold">
+                @L["Hello"]
+            </h2>
+            <p class="text-muted mt-2">
+                (Navigasyon çubuğundan dili değiştirerek bu metnin değiştiğini test edebilirsin.)
+            </p>
+        </div>
+    </div>
 </div>
 
 @code {
@@ -66,23 +99,40 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // KULLANICI ADINI GÜVENLİ ŞEKİLDE AL
+        // 1. Kullanıcı adını Authentication State üzerinden al
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
 
-        if (user.Identity != null && user.Identity.IsAuthenticated)
+        if (user.Identity?.IsAuthenticated == true)
         {
             userName = user.Identity.Name ?? "Kullanıcı";
         }
 
-        // VERİLERİ ÇEK
-        var mSonuc = await DbProvider.Execute<Musteri>("sp_Musteriler");
-        if (mSonuc?.Items != null) musteriSayisi = mSonuc.Items.Count();
+        // 2. Veritabanı verilerini asenkron olarak çek
+        try
+        {
+            var mSonuc = await DbProvider.Execute<Musteri>("sp_Musteriler");
+            if (mSonuc?.Items != null) musteriSayisi = mSonuc.Items.Count();
 
-        var uSonuc = await DbProvider.Execute<Urun>("sp_UrunListele");
-        if (uSonuc?.Items != null) urunSayisi = uSonuc.Items.Count();
+            var uSonuc = await DbProvider.Execute<Urun>("sp_UrunListele");
+            if (uSonuc?.Items != null) urunSayisi = uSonuc.Items.Count();
 
-        var sSonuc = await DbProvider.Execute<Siparis>("sp_Siparisler");
-        if (sSonuc?.Items != null) siparisSayisi = sSonuc.Items.Count();
+            var sSonuc = await DbProvider.Execute<Siparis>("sp_Siparisler");
+            if (sSonuc?.Items != null) siparisSayisi = sSonuc.Items.Count();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError($"Veri çekme hatası: {ex.Message}");
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var now = DateTime.Now.ToString("HH:mm:ss");
+            Logger.LogInformation($"Ana Sayfa Görüntülendi - Saat: {now}");
+            Logger.LogWarning("Dashboard başarıyla yüklendi.");
+        }
     }
 }
