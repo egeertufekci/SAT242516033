@@ -1,30 +1,30 @@
 ﻿@using SAT242516033.Components.Layout
-@using Microsoft.AspNetCore.Components.Authorization
+@using SAT242516033.Components.Account.Pages 
+@* RedirectToLogin bileşeni neredeyse onun namespace'i lazım, muhtemelen Pages altındadır *@
 
-@* İŞTE BU ETİKET EKSİK OLDUĞU İÇİN ATIYOR SENİ *@
 <CascadingAuthenticationState>
     <Router AppAssembly="@typeof(Program).Assembly">
         <Found Context="routeData">
+            @* AuthorizeRouteView: Yetkili mi diye bakar *@
             <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
                 <NotAuthorized>
                     @if (context.User.Identity?.IsAuthenticated != true)
                     {
-                        <RedirectToLogin />
+                        @* Namespace belirtmeden direkt çağırıyoruz *@
+                        <SAT242516033.Components.RedirectToLogin />
+                        @* Eğer dosya Components klasöründeyse yukarıdaki gibi tam yol ver *@
                     }
                     else
                     {
-                        <div class="p-4 text-center">
-                            <h3>⛔ Yetkisiz Erişim</h3>
-                            <a href="/" class="btn btn-primary">Ana Sayfaya Dön</a>
-                        </div>
+                        <p role="alert">Bu sayfayı görüntülemeye yetkiniz yok.</p>
                     }
                 </NotAuthorized>
             </AuthorizeRouteView>
         </Found>
         <NotFound>
-            <PageTitle>Sayfa Bulunamadı</PageTitle>
+            <PageTitle>Bulunamadı</PageTitle>
             <LayoutView Layout="@typeof(MainLayout)">
-                <div class="p-4 text-center"><h3>🔍 Sayfa Yok</h3></div>
+                <p role="alert">Aradığınız sayfa bulunamadı.</p>
             </LayoutView>
         </NotFound>
     </Router>

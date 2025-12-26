@@ -4,6 +4,7 @@
 @using SAT242516033.Data
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
+@attribute [Authorize(Roles = "Admin,User")]
 
 @inject IMyDbModel_Provider DbProvider
 @inject IJSRuntime JSRuntime

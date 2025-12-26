@@ -1,8 +1,9 @@
-﻿@inject NavigationManager Navigation
+﻿@inject NavigationManager NavManager
+
 @code {
     protected override void OnInitialized()
     {
-        // Kullanıcıyı direkt Login sayfasına atar
-        Navigation.NavigateTo("login", true);
+        // Login sayfanın adresi neyse (örneğin: /login veya /Account/Login) buraya onu yaz
+        NavManager.NavigateTo("/login", true);
     }
 }

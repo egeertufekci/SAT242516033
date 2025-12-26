@@ -50,7 +50,7 @@ namespace SAT242516033.Models.MyServices
 
                             // Rol nesnesi açmıyoruz, direkt değerleri basıyoruz
                             RolId = reader.IsDBNull(rolIdIndex) ? null : reader.GetInt32(rolIdIndex),
-                            RolAdi = reader.IsDBNull(rolAdiIndex) ? null : reader.GetString(rolAdiIndex)
+                           
                         };
                     }
                 }

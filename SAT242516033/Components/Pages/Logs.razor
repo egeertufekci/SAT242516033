@@ -1,49 +1,143 @@
 ﻿@page "/logs"
 @inject SAT242516033.Logging.LogService LogService
 @using SAT242516033.Logging
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
 
-<h3>Sistem Logları (Dosya)</h3>
+<div class="container-fluid mt-4">
+    <div class="row mb-3 align-items-center">
+        <div class="col-md-6">
+            <h3 class="fw-bold text-secondary"><i class="bi bi-file-earmark-text"></i> Sistem Logları (Dosya)</h3>
+        </div>
+        <div class="col-md-6">
+            <div class="input-group shadow-sm">
+                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control border-start-0 shadow-none"
+                       placeholder="Mesaj veya kaynak içinde ara..."
+                       @bind="searchText" @bind:event="oninput" />
+            </div>
+        </div>
+    </div>
 
-@if (LogListesi == null)
-{
-    <p><em>Loglar yükleniyor...</em></p>
-}
-else if (LogListesi.Count == 0)
-{
-    <div class="alert alert-info">Sistemde henüz log kaydı yok.</div>
-}
-else
-{
-    <table class="table table-sm table-hover">
-        <thead>
-            <tr>
-                <th>Tarih</th>
-                <th>Seviye</th>
-                <th>Kategori</th>
-                <th>Mesaj</th>
-                <th>Kaynak</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var log in LogListesi)
-            {
-                <tr>
-                    <td>@log.Timestamp.ToString("g")</td>
-                    <td>@log.Level</td>
-                    <td>@log.Category</td>
-                    <td>@log.Message</td>
-                    <td>@log.Source</td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
+    @if (LogListesi == null)
+    {
+        <div class="text-center p-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2">Loglar yükleniyor...</p>
+        </div>
+    }
+    else if (FilteredLogs.Count() == 0)
+    {
+        <div class="alert alert-info">Eşleşen log kaydı bulunamadı.</div>
+    }
+    else
+    {
+        <div class="card shadow-sm border-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="width: 15%;">Tarih</th>
+                            <th style="width: 10%;">Seviye</th>
+                            <th style="width: 15%;">Kategori</th>
+                            <th>Mesaj</th>
+                            <th style="width: 15%;">Kaynak</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var log in GetCurrentPageLogs())
+                        {
+                            <tr>
+                                <td class="small">@log.Timestamp.ToString("dd.MM.yyyy HH:mm:ss")</td>
+                                <td><span class="badge bg-@(GetBadgeColor(log.Level))">@log.Level</span></td>
+                                <td><small class="text-muted">@log.Category</small></td>
+                                <td class="text-wrap">@log.Message</td>
+                                <td><small>@log.Source</small></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        @* --- SAYFALAMA KONTROLLERİ (DÜZELTİLDİ) --- *@
+        @if (TotalPages > 1)
+        {
+            <nav class="mt-3">
+                <ul class="pagination pagination-sm justify-content-center">
+                    <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                        <button class="page-link shadow-none" @onclick="() => ChangePage(1)">« İlk</button>
+                    </li>
+                    <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                        <button class="page-link shadow-none" @onclick="() => ChangePage(currentPage - 1)">Geri</button>
+                    </li>
+
+                    @* Sliding Window: Sadece o anki sayfanın etrafını göster *@
+                    @{
+                        int windowSize = 2;
+                        int startPage = Math.Max(1, currentPage - windowSize);
+                        int endPage = Math.Min(TotalPages, currentPage + windowSize);
+
+                        if (currentPage <= windowSize) endPage = Math.Min(TotalPages, 5);
+                        if (currentPage > TotalPages - windowSize) startPage = Math.Max(1, TotalPages - 4);
+                    }
+
+                    @for (int i = startPage; i <= endPage; i++)
+                    {
+                        var p = i;
+                        <li class="page-item @(currentPage == p ? "active" : "")">
+                            <button class="page-link shadow-none" @onclick="() => ChangePage(p)">@p</button>
+                        </li>
+                    }
+
+                    <li class="page-item @(currentPage >= TotalPages ? "disabled" : "")">
+                        <button class="page-link shadow-none" @onclick="() => ChangePage(currentPage + 1)">İleri</button>
+                    </li>
+                    <li class="page-item @(currentPage >= TotalPages ? "disabled" : "")">
+                        <button class="page-link shadow-none" @onclick="() => ChangePage(TotalPages)">Son »</button>
+                    </li>
+                </ul>
+                <div class="text-center text-muted small mt-1">
+                    Toplam <strong>@TotalPages</strong> sayfa (@FilteredLogs.Count() kayıt)
+                </div>
+            </nav>
+        }
+    }
+</div>
 
 @code {
     private List<LogEntry> LogListesi;
+    private string searchText = "";
+    private int currentPage = 1;
+    private int itemsPerPage = 10;
 
     protected override async Task OnInitializedAsync()
     {
         LogListesi = await LogService.GetFileLogsAsync();
     }
+
+    private IEnumerable<LogEntry> FilteredLogs =>
+        LogListesi?.Where(l => string.IsNullOrWhiteSpace(searchText) ||
+                             (l.Message?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                             (l.Source?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false))
+        ?? Enumerable.Empty<LogEntry>();
+
+    private int TotalPages => (int)Math.Ceiling((double)FilteredLogs.Count() / itemsPerPage);
+
+    private IEnumerable<LogEntry> GetCurrentPageLogs() =>
+        FilteredLogs.Skip((currentPage - 1) * itemsPerPage).Take(itemsPerPage);
+
+    private void ChangePage(int page)
+    {
+        if (page >= 1 && page <= TotalPages) currentPage = page;
+    }
+
+    private string GetBadgeColor(string? level) => level?.ToLower() switch
+    {
+        "info" or "information" => "info",
+        "warn" or "warning" => "warning",
+        "error" or "err" or "fail" => "danger",
+        "critical" or "fatal" => "dark",
+        _ => "secondary"
+    };
 }

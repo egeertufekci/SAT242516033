@@ -1,55 +1,113 @@
 ﻿@page "/stats"
 @inject StatsService Service
+@inject IJSRuntime JSRuntime
 
-<h3>Sistem İstatistikleri</h3>
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin")]
 
-@if (Istatistikler == null) // <-- BURAYI DÜZELT
-{
-    <p><em>Veriler yükleniyor...</em></p>
-}
-else
-{
-    <div class="row">
-        <div class="col-md-3">
-            <div class="card text-white bg-primary mb-3">
-                <div class="card-header">Ürünler</div>
-                <div class="card-body">
-                    <h5 class="card-title">@Istatistikler.ToplamUrun</h5>
-                </div>
-            </div>
+<div class="container mt-4">
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-6">
+            <h3 class="fw-bold text-secondary"><i class="bi bi-bar-chart-fill me-2"></i>Sistem İstatistikleri</h3>
         </div>
-        <div class="col-md-3">
-            <div class="card text-white bg-success mb-3">
-                <div class="card-header">Siparişler</div>
-                <div class="card-body">
-                    <h5 class="card-title">@Istatistikler.ToplamSiparis</h5>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-white bg-warning mb-3">
-                <div class="card-header">Müşteriler</div>
-                <div class="card-body">
-                    <h5 class="card-title">@Istatistikler.ToplamMusteri</h5>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-white bg-danger mb-3">
-                <div class="card-header">Kullanıcılar</div>
-                <div class="card-body">
-                    <h5 class="card-title">@Istatistikler.ToplamKullanici</h5>
-                </div>
-            </div>
+        <div class="col-md-6 text-end">
+            <button class="btn btn-outline-primary btn-sm" @onclick="VerileriYenile">
+                <i class="bi bi-arrow-clockwise"></i> Verileri Güncelle
+            </button>
         </div>
     </div>
-}
+
+    @if (Istatistikler == null)
+    {
+        <div class="d-flex align-items-center p-5 bg-light rounded shadow-sm">
+            <div class="spinner-border text-primary me-4"></div>
+            <div>
+                <h5 class="mb-0">Veriler Hazırlanıyor...</h5>
+                <small class="text-muted">Grafikler ve sayılar oluşturulurken lütfen bekleyiniz.</small>
+            </div>
+        </div>
+    }
+    else
+    {
+        @* Üst Kartlar *@
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-white bg-primary mb-3 shadow border-0">
+                    <div class="card-body">
+                        <h6 class="card-title text-white-50">Toplam Ürün</h6>
+                        <h2 class="display-6 fw-bold">@Istatistikler.ToplamUrun</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-success mb-3 shadow border-0">
+                    <div class="card-body">
+                        <h6 class="card-title text-white-50">Toplam Sipariş</h6>
+                        <h2 class="display-6 fw-bold">@Istatistikler.ToplamSiparis</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-dark bg-warning mb-3 shadow border-0">
+                    <div class="card-body">
+                        <h6 class="card-title text-dark-50">Toplam Müşteri</h6>
+                        <h2 class="display-6 fw-bold">@Istatistikler.ToplamMusteri</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-danger mb-3 shadow border-0">
+                    <div class="card-body">
+                        <h6 class="card-title text-white-50">Kullanıcı Sayısı</h6>
+                        <h2 class="display-6 fw-bold">@Istatistikler.ToplamKullanici</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* GRAFİK ALANI *@
+        <div class="row">
+            <div class="col-md-8 mx-auto">
+                <div class="card shadow border-0 p-4">
+                    <h5 class="fw-bold mb-4 text-center">Genel Dağılım Grafiği</h5>
+                    <canvas id="statsBarChart" style="max-height: 400px;"></canvas>
+                </div>
+            </div>
+        </div>
+    }
+</div>
 
 @code {
-    private StatsViewModel Istatistikler;
+    private StatsViewModel? Istatistikler;
 
     protected override async Task OnInitializedAsync()
     {
+        await VerileriYukle();
+    }
+
+    private async Task VerileriYukle()
+    {
+        await Task.Yield(); // UI'ı serbest bırak
         Istatistikler = await Service.GetStatsAsync();
+    }
+
+    private async Task VerileriYenile()
+    {
+        Istatistikler = null;
+        await VerileriYukle();
+        StateHasChanged();
+    }
+
+    // Grafik çizimi için OnAfterRenderAsync kullanıyoruz çünkü Canvas'ın DOM'da oluşması lazım
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Istatistikler != null)
+        {
+            await JSRuntime.InvokeVoidAsync("drawStatsChart",
+                Istatistikler.ToplamUrun,
+                Istatistikler.ToplamSiparis,
+                Istatistikler.ToplamMusteri,
+                Istatistikler.ToplamKullanici);
+        }
     }
 }

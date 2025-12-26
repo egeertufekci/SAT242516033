@@ -11,9 +11,7 @@ namespace SAT242516033.Data
         {
             base.OnModelCreating(builder);
 
-            // (Varsa) HasNoKey tanımların burada kalabilir
-            // builder.Entity<Personel>().HasNoKey();
-            // ...
+            
         }
     }
 }

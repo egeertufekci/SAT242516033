@@ -56,7 +56,7 @@ namespace SAT242516033.Models.DbContexts // veya senin namespace'in neyse
                     .HasColumnName("KayitTarihi")
                     .HasColumnType("datetime")
                     .HasDefaultValueSql("getdate()");
-                entity.Ignore(e => e.RolAdi);
+               
             });
 
             modelBuilder.Entity<Musteri>(entity =>

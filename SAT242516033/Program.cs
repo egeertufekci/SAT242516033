@@ -1,203 +1,186 @@
-using Microsoft.AspNetCore.Components.Authorization;
+﻿using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SAT242516033.Components;
 using SAT242516033.Components.Account;
+using SAT242516033.Data;
 using SAT242516033.Logging;
 using SAT242516033.Models.DbContexts;
 using SAT242516033.Models.MyDbModels;
 using SAT242516033.Models.Providers;
 using SAT242516033.Models.UnitOfWorks;
-using SAT242516033.Data;
+using Microsoft.Data.SqlClient;
+using SAT242516033.Models.MyServices;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using Microsoft.AspNetCore.Localization; // EKLENDİ
+using System.Globalization; // EKLENDİ
+using QuestPDF.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- 1. LOGLAMA AYARLARI ---
+// --- LOGGING AYARLARI ---
 var logPath = Path.Combine(Directory.GetCurrentDirectory(), "Logs");
 if (!Directory.Exists(logPath)) Directory.CreateDirectory(logPath);
 
+var logpath = Path.Combine(Directory.GetCurrentDirectory(), "Logs");
+if (!Directory.Exists(logPath)) Directory.CreateDirectory(logPath);
+
 var compositeLoggerProvider = new CompositeLoggerProvider()
-    .AddProvider(new AsyncFileLoggerProvider(Path.Combine("Logs", "app-log.txt")));
+	.AddProvider(new AsyncFileLoggerProvider(Path.Combine("Logs", "app-log.txt")));
 
 builder.Logging.ClearProviders();
 builder.Logging.AddProvider(compositeLoggerProvider);
 
 builder.Services.AddSingleton(new LogService(
-    filePath: Path.Combine("Logs", "app-log.txt")
+	filePath: Path.Combine("Logs", "app-log.txt")
 ));
+// ------------------------
 
-// --- 2. BLAZOR TEMEL AYARLARI ---
+// DÜZELTME 1: SignalR mesaj boyutunu 10MB yaptık (Büyük loglar ve PDF donmasın diye)
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+	.AddInteractiveServerComponents()
+	.AddHubOptions(options =>
+	{
+		options.MaximumReceiveMessageSize = 10 * 1024 * 1024; // 10MB
+	});
 
-builder.Services.AddCascadingAuthenticationState(); // ÞART!
-builder.Services.AddHttpContextAccessor();
-
-// --- 3. SESSION VE AUTH AYARLARI ---
-builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
+builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
+builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 
-builder.Services.AddAuthorization();
 builder.Services.AddAuthentication(options =>
 {
-    options.DefaultScheme = IdentityConstants.ApplicationScheme;
-    options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
+	options.DefaultScheme = IdentityConstants.ApplicationScheme;
+	options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
 })
-    .AddIdentityCookies();
+	.AddIdentityCookies();
 
-
-// --- 4. VERÝTABANI BAÐLANTILARI ---
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+	?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
-builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(connectionString));
-builder.Services.AddDbContext<MyDbModel_DbContext>(options => options.UseSqlServer(connectionString));
-builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<StatsService>();
+builder.Services.AddIdentityCore<ApplicationUser>(options =>
+{
+	// 1. KULLANICI ŞİFRE İLKELERİNİN BELİRLENMESİ
+	options.SignIn.RequireConfirmedAccount = true;
 
+	options.Password.RequireDigit = true;           // En az bir rakam olsun mu?
+	options.Password.RequiredLength = 6;            // En az kaç karakter?
+	options.Password.RequireNonAlphanumeric = false; // Sembol (!@#) zorunlu mu?
+	options.Password.RequireUppercase = false;       // Büyük harf zorunlu mu?
+	options.Password.RequireLowercase = true;        // Küçük harf zorunlu mu?
+
+	// Ekstra: Yanlış şifre girince kilitlenme (Lockout) ayarları
+	options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+	options.Lockout.MaxFailedAccessAttempts = 5;
+})
+	.AddRoles<IdentityRole>() // 2. ROL YÖNETİMİ & RoleManager BURADA EKLENİR (Çok Önemli!)
+	.AddEntityFrameworkStores<ApplicationDbContext>()
+	.AddSignInManager()
+	.AddDefaultTokenProviders();
+
+
+
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+	options.UseSqlServer(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-// Identity ayarlarý
-builder.Services.AddIdentityCore<ApplicationUser>(options =>
-    {
-        options.SignIn.RequireConfirmedAccount = false;
-        options.Password.RequireNonAlphanumeric = false;
-        options.Password.RequireUppercase = false;
-        options.Password.RequireLowercase = false;
-        options.Password.RequiredLength = 6;
-    })
-    .AddEntityFrameworkStores<ApplicationDbContext>()
-    .AddRoles<ApplicationRole>()
-    .AddSignInManager()
-    .AddDefaultTokenProviders();
+builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
+	.AddEntityFrameworkStores<ApplicationDbContext>()
+	.AddSignInManager()
+	.AddDefaultTokenProviders();
 
-// --- 5. UNIT OF WORK & PROVIDERS ---
-// Generic UnitOfWork
-builder.Services.AddScoped<IMyDbModel_UnitOfWork, MyDbModel_UnitOfWork<MyDbModel_DbContext>>();
-// ApplicationDbContext kullanan UnitOfWork (Bunu da eklemiþsin, kalsýn)
-builder.Services.AddScoped<IMyDbModel_UnitOfWork, MyDbModel_UnitOfWork<ApplicationDbContext>>();
-
-// Generic Models
-builder.Services.AddScoped(typeof(IMyDbModel<>), typeof(MyDbModel<>));
-
-// Providers
-builder.Services.AddScoped<IMyDbModel_Provider, MyDbModel_Provider>();
-
-// --- 6. LOCALIZATION (DÝL) AYARLARI ---
-builder.Services.AddLocalization(options => options.ResourcesPath = Path.Combine("Models", "MyResources"));
-builder.Services.AddScoped(typeof(LocalizerService<>));
-
-// Controller Localization desteði
-builder.Services.AddControllers()
-    .AddDataAnnotationsLocalization(options => {
-        options.DataAnnotationLocalizerProvider = (type, factory) =>
-            factory.Create(typeof(SAT242516033.Loc));
-    });
-
-var supportedCultures = new[] { "tr", "en", "de" };
-builder.Services.Configure<RequestLocalizationOptions>(options =>
-{
-    options.DefaultRequestCulture = new Microsoft.AspNetCore.Localization.RequestCulture("tr");
-    options.SupportedCultures = supportedCultures.Select(c => new System.Globalization.CultureInfo(c)).ToList();
-    options.SupportedUICultures = supportedCultures.Select(c => new System.Globalization.CultureInfo(c)).ToList();
-    options.RequestCultureProviders.Insert(0, new Microsoft.AspNetCore.Localization.QueryStringRequestCultureProvider());
-    options.RequestCultureProviders.Insert(1, new Microsoft.AspNetCore.Localization.CookieRequestCultureProvider());
-    options.RequestCultureProviders.Insert(2, new Microsoft.AspNetCore.Localization.AcceptLanguageHeaderRequestCultureProvider());
-});
-
-// --- EMAIL SENDER (Identity Hatasý Vermesin Diye) ---
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
-// --- APP BAÞLIYOR ---
+// --- DB SERVİSLERİ ---
+builder.Services.AddDbContext<MyDbModel_DbContext>(options => options.UseSqlServer(connectionString));
+builder.Services.AddScoped<IMyDbModel_UnitOfWork, MyDbModel_UnitOfWork<MyDbModel_DbContext>>();
+builder.Services.AddScoped(typeof(IMyDbModel<>), typeof(MyDbModel<>));
+builder.Services.AddScoped<IMyDbModel_UnitOfWork, MyDbModel_UnitOfWork<ApplicationDbContext>>();
+builder.Services.AddScoped<IMyDbModel_Provider, MyDbModel_Provider>();
+
+// --- DİĞER SERVİSLER ---
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
+builder.Services.AddScoped<ProtectedSessionStorage>();
+builder.Services.AddScoped<IUserService, UserService>();
+
+// DÜZELTME 2: İstatistikler sayfasının çalışması için gerekli servis kaydı
+builder.Services.AddScoped<StatsService>();
+
+builder.Services.AddAuthorizationCore();
+builder.Services.AddControllers();
+
+
+// 🌍 LOCALIZATION (DİL) AYARLARI - DÜZELTİLMİŞ HALİ
+
+builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
+
+// 2. Senin App.razor'ın patlamaması için gerekli olan servis
+builder.Services.AddScoped(typeof(SAT242516033.Models.MyServices.LocalizerService<>));
+
+// 3. Desteklenen Diller (BURASI ÇOK ÖNEMLİ!)
+// Home.razor'da "tr-TR" ve "en-US" kullanıyorsun, o yüzden burası da birebir aynı olmalı.
+var supportedCultures = new[] { "tr-TR", "en-US", "tr", "en" };
+
+builder.Services.Configure<RequestLocalizationOptions>(options =>
+{
+	var cultures = supportedCultures.Select(c => new CultureInfo(c)).ToList();
+
+	options.DefaultRequestCulture = new RequestCulture("tr-TR"); // Varsayılan TR olsun
+	options.SupportedCultures = cultures;
+	options.SupportedUICultures = cultures;
+
+	// Dil seçimi önceliği: URL (?culture=tr-TR) -> Cookie -> Tarayıcı Dili
+	options.RequestCultureProviders.Insert(0, new QueryStringRequestCultureProvider());
+});
+// =================================================================
+builder.Services.AddCascadingAuthenticationState();
+QuestPDF.Settings.License = LicenseType.Community;
 var app = builder.Build();
 
-// --- 7. DATABASE MIGRATION TRIGGER ---
 using (var scope = app.Services.CreateScope())
 {
     try
     {
-        Console.WriteLine("Veritabaný baðlantýsý kontrol ediliyor...");
-        // Baðlantýyý tetiklemek için ufak bir check
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        // db.Database.Migrate(); // Entity Framework kullanýyorsan açabilirsin
-        Console.WriteLine("Sistem Hazýr.");
+ 
+        db.Database.Migrate();
     }
     catch (Exception ex)
     {
-        Console.WriteLine("Baþlatma hatasý: " + ex.Message);
+        Console.WriteLine("Migration error:");
+        Console.WriteLine(ex.ToString());
     }
 }
 
-// --- 8. MIDDLEWARE AYARLARI ---
-var locOptions = app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<RequestLocalizationOptions>>();
-app.UseRequestLocalization(locOptions.Value);
-
 if (app.Environment.IsDevelopment())
 {
-    app.UseMigrationsEndPoint();
+	app.UseMigrationsEndPoint();
 }
 else
 {
-    app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    app.UseHsts();
+	app.UseExceptionHandler("/Error", createScopeForErrors: true);
+	app.UseHsts();
 }
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+
+// 🌍 DİL AYARINI AKTİF ET (App Run'dan önce!)
+var locOptions = app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<RequestLocalizationOptions>>();
+app.UseRequestLocalization(locOptions.Value);
+// ------------------------------------------
+
 app.UseAntiforgery();
-app.UseAuthentication();
-app.UseAuthorization();
 
 app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+	.AddInteractiveServerRenderMode();
 
-// Identity endpointlerini ekle (Kayýt ol vs. çalýþsýn diye)
 app.MapAdditionalIdentityEndpoints();
-
-// --- ADMIN SEED ---
-using (var scope = app.Services.CreateScope())
-{
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-
-    const string adminRoleName = "Admin";
-    const string adminUserName = "admin";
-    const string adminPassword = "admin123";
-
-    if (!await roleManager.RoleExistsAsync(adminRoleName))
-    {
-        await roleManager.CreateAsync(new ApplicationRole { Name = adminRoleName });
-    }
-
-    var adminUser = await userManager.FindByNameAsync(adminUserName);
-    if (adminUser == null)
-    {
-        adminUser = new ApplicationUser
-        {
-            UserName = adminUserName,
-            Email = "admin@test.com",
-            EmailConfirmed = true
-        };
-        await userManager.CreateAsync(adminUser, adminPassword);
-    }
-    else
-    {
-        adminUser.EmailConfirmed = true;
-        await userManager.UpdateAsync(adminUser);
-    }
-
-    if (!await userManager.CheckPasswordAsync(adminUser, adminPassword))
-    {
-        var resetToken = await userManager.GeneratePasswordResetTokenAsync(adminUser);
-        await userManager.ResetPasswordAsync(adminUser, resetToken, adminPassword);
-    }
-
-    if (!await userManager.IsInRoleAsync(adminUser, adminRoleName))
-    {
-        await userManager.AddToRoleAsync(adminUser, adminRoleName);
-    }
-}
+app.MapControllers();
 
 app.Run();

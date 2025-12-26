@@ -1,9 +1,9 @@
 ﻿version: "3.9"
 
 services:
-  BlazorApp_C:
-    build: .
-    container_name: BlazorApp_C
+  blazorapp_a:
+    image: blazorapp:latest
+    container_name: blazorapp_a
     ports:
       - "8091:8080"
     environment:
@@ -12,9 +12,9 @@ services:
       - SITE=A
     restart: unless-stopped
 
-  BlazorApp_C:
-    build: .
-    container_name: BlazorApp_C
+  blazorapp_b:
+    image: blazorapp:latest
+    container_name: blazorapp_b
     ports:
       - "8092:8080"
     environment:
@@ -24,7 +24,7 @@ services:
     restart: unless-stopped
 
   blazorapp_c:
-    build: .
+    image: blazorapp:latest
     container_name: blazorapp_c
     ports:
       - "8093:8080"

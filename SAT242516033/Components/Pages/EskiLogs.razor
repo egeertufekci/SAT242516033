@@ -1,0 +1,50 @@
+﻿@* @page "/logs"
+@inject SAT242516033.Logging.LogService LogService
+@using SAT242516033.Logging
+
+<h3>Sistem Logları (Dosya)</h3>
+
+@if (LogListesi == null)
+{
+    <p><em>Loglar yükleniyor...</em></p>
+}
+else if (LogListesi.Count == 0)
+{
+    <div class="alert alert-info">Sistemde henüz log kaydı yok.</div>
+}
+else
+{
+    <table class="table table-sm table-hover">
+        <thead>
+            <tr>
+                <th>Tarih</th>
+                <th>Seviye</th>
+                <th>Kategori</th>
+                <th>Mesaj</th>
+                <th>Kaynak</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var log in LogListesi)
+            {
+                <tr>
+                    <td>@log.Timestamp.ToString("g")</td>
+                    <td>@log.Level</td>
+                    <td>@log.Category</td>
+                    <td>@log.Message</td>
+                    <td>@log.Source</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<LogEntry> LogListesi;
+
+    protected override async Task OnInitializedAsync()
+    {
+        LogListesi = await LogService.GetFileLogsAsync();
+    }
+}
+ *@

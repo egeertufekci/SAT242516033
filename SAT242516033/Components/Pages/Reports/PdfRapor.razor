@@ -1,45 +1,80 @@
 ﻿@page "/Raporlar/pdf-olustur"
-@using SAT242516033.Models.Providers
-@using SAT242516033.Models.MyDbModels
+
 @using SAT242516033.Data
+@using SAT242516033.Models.MyDbModels
+@using SAT242516033.Models.Providers
 @using SAT242516033.Models.MyReports
 @using QuestPDF.Fluent
+@using Microsoft.AspNetCore.Authorization @* KRİTİK: Authorize hatasını bu satır çözer *@
+
 @inject IMyDbModel_Provider DbProvider
+@attribute [Authorize]
 
 <div class="container-fluid" style="height: 90vh;">
-    <div class="d-flex justify-content-between align-items-center mb-2">
-        <h3>📄 Sipariş Raporu Önizleme</h3>
+    <div class="d-flex justify-content-between align-items-center mb-2 pt-2">
+        <h3 class="fw-bold"><i class="bi bi-file-earmark-pdf"></i> Ürün Stok Raporu</h3>
     </div>
 
-    @if (pdfDataUrl == null)
+    @if (errorMessage != null)
     {
-        <div class="alert alert-info">
-            <div class="spinner-border spinner-border-sm me-2"></div>
-            PDF Oluşturuluyor, lütfen bekleyiniz...
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+    else if (pdfDataUrl == null)
+    {
+        <div class="alert alert-info d-flex align-items-center shadow-sm">
+            <div class="spinner-border spinner-border-sm text-primary me-3"></div>
+            <div>
+                <strong>PDF Hazırlanıyor...</strong><br />
+                <small>Ürün listesi işleniyor, lütfen bekleyiniz.</small>
+            </div>
         </div>
     }
     else
     {
-        @* İŞTE BU SATIR PDF'İ SAYFADA GÖSTERİR *@
-        <iframe src="@pdfDataUrl" style="width: 100%; height: 100%; border: 1px solid #ccc; border-radius: 4px;"></iframe>
+        <iframe src="@pdfDataUrl" style="width: 100%; height: 95%; border: 1px solid #ccc; border-radius: 8px;"></iframe>
     }
 </div>
 
 @code {
     private string? pdfDataUrl;
+    private string? errorMessage;
+    public IMyDbModel<Urun> Model { get; set; } = new MyDbModel<Urun>();
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // 1. Verileri Çek
-        var sSonuc = await DbProvider.Execute<Siparis>("sp_Siparisler");
-        var siparisler = sSonuc?.Items?.ToList() ?? new List<Siparis>();
+        if (firstRender)
+        {
+            try
+            {
+                await Task.Delay(100);
 
-        // 2. PDF Byte Dizisini Oluştur
-        var rapor = new Report_Siparis(siparisler);
-        var pdfBytes = rapor.GeneratePdf();
+                // Ürün raporu için SP'yi çağırıyoruz
+                var sonuc = await DbProvider.Execute(new MyDbModel<Urun>(), "sp_UrunRaporu", false);
 
-        // 3. Byte dizisini Base64 stringe çevirip iframe'e veriyoruz
-        var base64 = Convert.ToBase64String(pdfBytes);
-        pdfDataUrl = $"data:application/pdf;base64,{base64}";
+                if (sonuc?.Items != null && sonuc.Items.Any())
+                {
+                    var urunler = sonuc.Items.ToList();
+
+                    // PDF oluşturma işlemini arka plana alıyoruz
+                    var pdfBytes = await Task.Run(() =>
+                    {
+                        var report = new Report_Urun(urunler);
+                        return report.GeneratePdf();
+                    });
+
+                    pdfDataUrl = $"data:application/pdf;base64,{Convert.ToBase64String(pdfBytes)}";
+                }
+                else
+                {
+                    errorMessage = "Raporlanacak ürün verisi bulunamadı.";
+                }
+            }
+            catch (Exception ex)
+            {
+                errorMessage = "Hata: " + ex.Message;
+            }
+
+            StateHasChanged();
+        }
     }
 }

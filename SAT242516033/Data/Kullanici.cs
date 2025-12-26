@@ -33,14 +33,6 @@ namespace SAT242516033.Data
         [SAT242516033.Models.Attributes.Viewable(false)]
         public int? RolId { get; set; }
 
-        // Listede Rol Adını göstermek için
-        [SAT242516033.Models.Attributes.Sortable(true)]
-        [SAT242516033.Models.Attributes.Editable(false)]
-        [SAT242516033.Models.Attributes.Viewable(true)]
-        [SAT242516033.Models.Attributes.LocalizedDescription("Rol", typeof(Loc))]
-        [System.ComponentModel.DataAnnotations.Schema.NotMapped]
-        public string? RolAdi { get; set; }
-
         [SAT242516033.Models.Attributes.Sortable(true)]
         [SAT242516033.Models.Attributes.Editable(false)]
         [SAT242516033.Models.Attributes.Viewable(true)]
