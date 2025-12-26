@@ -2,34 +2,34 @@
 
 services:
   blazorapp_a:
-    image: blazorapp:latest
-    container_name: blazorapp_a
+    build: .
+    image: blazorapp:latest  # İmaj ismini biz veriyoruz
+    container_name: BlazorApp_a
     ports:
       - "8091:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__DefaultConnection=${DB_CONNECTION_A}
-      - SITE=A
     restart: unless-stopped
 
   blazorapp_b:
-    image: blazorapp:latest
-    container_name: blazorapp_b
+    build: .
+    image: blazorapp:latest  # Aynı imajı kullanacaklar
+    container_name: BlazorApp_b
     ports:
       - "8092:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__DefaultConnection=${DB_CONNECTION_B}
-      - SITE=B
     restart: unless-stopped
 
   blazorapp_c:
+    build: .
     image: blazorapp:latest
-    container_name: blazorapp_c
+    container_name: BlazorApp_c
     ports:
       - "8093:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__DefaultConnection=${DB_CONNECTION_C}
-      - SITE=C
     restart: unless-stopped

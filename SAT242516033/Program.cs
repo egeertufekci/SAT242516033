@@ -119,11 +119,8 @@ builder.Services.AddControllers();
 
 builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 
-// 2. Senin App.razor'ın patlamaması için gerekli olan servis
 builder.Services.AddScoped(typeof(SAT242516033.Models.MyServices.LocalizerService<>));
 
-// 3. Desteklenen Diller (BURASI ÇOK ÖNEMLİ!)
-// Home.razor'da "tr-TR" ve "en-US" kullanıyorsun, o yüzden burası da birebir aynı olmalı.
 var supportedCultures = new[] { "tr-TR", "en-US", "tr", "en" };
 
 builder.Services.Configure<RequestLocalizationOptions>(options =>
