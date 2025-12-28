@@ -24,8 +24,8 @@ var builder = WebApplication.CreateBuilder(args);
 var logPath = Path.Combine(Directory.GetCurrentDirectory(), "Logs");
 if (!Directory.Exists(logPath)) Directory.CreateDirectory(logPath);
 
-var logpath = Path.Combine(Directory.GetCurrentDirectory(), "Logs");
-if (!Directory.Exists(logPath)) Directory.CreateDirectory(logPath);
+//var logpath = Path.Combine(Directory.GetCurrentDirectory(), "Logs");
+//if (!Directory.Exists(logPath)) Directory.CreateDirectory(logPath);
 
 var compositeLoggerProvider = new CompositeLoggerProvider()
 	.AddProvider(new AsyncFileLoggerProvider(Path.Combine("Logs", "app-log.txt")));
