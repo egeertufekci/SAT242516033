@@ -13,7 +13,6 @@
 
     public static class OperationsExtensions
     {
-        // Mehmet'in kodundaki .Color() ve .Description() metodları için
         public static string Color(this Operations op) => op switch
         {
             Operations.Add => "success",

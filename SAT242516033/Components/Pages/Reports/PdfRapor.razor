@@ -48,14 +48,12 @@
             {
                 await Task.Delay(100);
 
-                // Ürün raporu için SP'yi çağırıyoruz
                 var sonuc = await DbProvider.Execute(new MyDbModel<Urun>(), "sp_UrunRaporu", false);
 
                 if (sonuc?.Items != null && sonuc.Items.Any())
                 {
                     var urunler = sonuc.Items.ToList();
 
-                    // PDF oluşturma işlemini arka plana alıyoruz
                     var pdfBytes = await Task.Run(() =>
                     {
                         var report = new Report_Urun(urunler);
